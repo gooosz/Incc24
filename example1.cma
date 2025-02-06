@@ -1,0 +1,26 @@
+jump endproc_0
+proc_0:
+enter
+alloc 8
+loadrc -16
+load
+loadc 1
+add
+loadrc 8
+store
+loadrc -16
+store
+pop
+return
+endproc_0:
+loadc proc_0
+loadc 0
+store
+pop
+loadc 3
+mark
+loadc 0
+load
+call
+pop
+slide 0 8

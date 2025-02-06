@@ -1,0 +1,11 @@
+mkvec 0
+mkfunval lambda_0
+jump end_lambda_0
+lambda_0:
+pushloc 0
+popenv
+end_lambda_0:
+loadc 6
+mkbasic
+slide 1
+getbasic
