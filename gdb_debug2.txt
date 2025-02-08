@@ -1,0 +1,166 @@
+ASCII:
+0x42 = 'B'
+0x44 = 'D'
+0x46 = 'F'
+0x56 = 'V'
+
+
+old rbp: dd20
+
+global vector: 0x4052c0 ['V', 0x4052e0] -> [1, 0x4052a0] für Param x
+						  ↓
+						['D', 0x0]
+
+
+param vector bei x(2): 0x405320 ['V', 0x405340] -> [1, 0x405460]
+							 ↓
+						       ['B', 0x405480] -> [2]
+
+param vector bei x(1): 0x405320 ['V', 0x405340] -> [1, 0x4054a0]
+						  ↓
+						['B', 0x4054c0] -> [1]
+
+param vector bei x(0): 0x405320 ['V', 0x405340] -> [1, 0x4054e0]
+						  ↓
+						['B', 0x405500] -> [0]
+
+
+
+Stack bei Aufruf x(2):
+_________________
+
+0x401494	<- back_from_call_1
+0xdd78		<- old rbp
+0x4052c0	<- old global vector
+0x4053c0	-> ['F', 0x405440] -> ['lambda_0', 0x4053e0] -> ['V', 0x405400] -> [1, 0x4053c0]
+0x405360	-> ['B', 0x4053a0] -> [1]
+0xdd20		<- old rbp
+
+
+
+
+
+Stack bei Aufruf y+x(1):
+_________________
+
+
+0x4013e8	<- back_from_call_0
+0xdc38		<- old rbp
+0x4053e0	-> ['V', 0x405400] -> [1, 0x4053c0] old global vector
+					    ↓
+					  ['F', 0x405440] -> ['lambda_0', 0x4053e0] -> ['V', 0x405400] -> [1, 0x4053c0]
+1
+-- ↑ x(1)
+0x4013e8	<- back_from_call_0
+0xdd58		<- old rbp
+0x4053e0	-> ['V', 0x405400] -> [1, 0x4053c0] old global vector
+					    ↓
+					  ['F', 0x405440] -> ['lambda_0', 0x4053e0] -> ['V', 0x405400] -> [1, 0x4053c0]
+2
+-- ↑ x(2)
+0x401494	<- back_from_call_1
+0xdd78		<- old rbp
+0x4052c0	<- old global vector
+0x4053c0	-> ['F', 0x405440] -> ['lambda_0', 0x4053e0] -> ['V', 0x405400] -> [1, 0x4053c0]
+0x405360	-> ['B', 0x4053a0] -> [1]
+0xdd20		<- old rbp
+
+
+
+
+
+Stack bei Aufruf y+x(0):
+_________________
+
+
+0x405520	-> ['B', 0x405540] -> [0]
+-- x(0)
+0x4013e8	<- back_from_call_0
+0xdc38		<- old rbp
+0x4053e0	-> ['V', 0x405400] -> [1, 0x4053c0] old global vector
+					    ↓
+					  ['F', 0x405440] -> ['lambda_0', 0x4053e0] -> ['V', 0x405400] -> [1, 0x4053c0]
+1
+-- ↑ x(1)
+0x4013e8	<- back_from_call_0
+0xdc58		<- old rbp
+0x4053e0	-> ['V', 0x405400] -> [1, 0x4053c0] old global vector
+					    ↓
+					  ['F', 0x405440] -> ['lambda_0', 0x4053e0] -> ['V', 0x405400] -> [1, 0x4053c0]
+2
+-- ↑ x(2)
+0x401494	<- back_from_call_1
+0xdd78		<- old rbp
+0x4052c0	<- old global vector
+0x4053c0	-> ['F', 0x405440] -> ['lambda_0', 0x4053e0] -> ['V', 0x405400] -> [1, 0x4053c0]
+0x405360	-> ['B', 0x4053a0] -> [1]
+0xdd20		<- old rbp
+
+
+
+
+
+
+Stack nach Aufruf y+x(0):
+_________________
+
+3
+-- ↑ x(2)
+0x4053c0	-> ['F', 0x405440] -> ['lambda_0', 0x4053e0] -> ['V', 0x405400] -> [1, 0x4053c0]
+0x405360	-> ['B', 0x4053a0] -> [1]
+0xdd20		<- old rbp
+
+
+
+
+
+
+
+
+
+
+
+code_v kp=1:
+SequenceExpression(seq=[
+	LocalExpression(
+		localvars=[('x',
+			LambdaExpression(params=['y'],
+				body=ITEExpression(
+					condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)),
+					ifbody=SelfEvaluatingExpression(id=0),
+					elsebody=BinaryOperatorExpression(
+						e1=VariableExpression(name='y'),
+						op='+',
+						e2=CallExpression(procname=VariableExpression(name='x'),
+							params=[BinaryOperatorExpression
+								e1=VariableExpression(name='y'),
+								op='-',
+								e2=SelfEvaluatingExpression(id=1))])))))],
+
+		body=BinaryOperatorExpression(
+			e1=CallExpression(procname=VariableExpression(name='x'),
+				params=[SelfEvaluatingExpression(id=2)]),
+			op='+',
+			e2=VariableExpression(name='x')))])
+
+
+
+
+
+
+code_v kp=1: LocalExpression(localvars=[('x', LambdaExpression(params=['y'], body=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=0), elsebody=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=CallExpression(procname=VariableExpression(name='x'), params=[BinaryOperatorExpression(e1=VariableExpression(name='y'), op='-', e2=SelfEvaluatingExpression(id=1))])))))], body=BinaryOperatorExpression(e1=CallExpression(procname=VariableExpression(name='x'), params=[SelfEvaluatingExpression(id=2)]), op='+', e2=VariableExpression(name='x')))
+localvar 0, kp=1: x = LambdaExpression(params=['y'], body=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=0), elsebody=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=CallExpression(procname=VariableExpression(name='x'), params=[BinaryOperatorExpression(e1=VariableExpression(name='y'), op='-', e2=SelfEvaluatingExpression(id=1))]))))
+code_v kp=2: LambdaExpression(params=['y'], body=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=0), elsebody=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=CallExpression(procname=VariableExpression(name='x'), params=[BinaryOperatorExpression(e1=VariableExpression(name='y'), op='-', e2=SelfEvaluatingExpression(id=1))]))))
+> free_vars {'x'} in LambdaExpression(params=['y'], body=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=0), elsebody=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=CallExpression(procname=VariableExpression(name='x'), params=[BinaryOperatorExpression(e1=VariableExpression(name='y'), op='-', e2=SelfEvaluatingExpression(id=1))]))))
+lambda env: {'x': {'addr': 0, 'scope': 'global', 'size': 8}, 'y': {'addr': 0, 'scope': 'param', 'size': 8}}
+code_v kp=0: ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=0), elsebody=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=CallExpression(procname=VariableExpression(name='x'), params=[BinaryOperatorExpression(e1=VariableExpression(name='y'), op='-', e2=SelfEvaluatingExpression(id=1))])))
+code_b kp=0: BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1))
+code_v kp=0: VariableExpression(name='y') in env {'x': {'addr': 0, 'scope': 'global', 'size': 8}, 'y': {'addr': 0, 'scope': 'param', 'size': 8}}
+
+
+
+
+
+
+
+

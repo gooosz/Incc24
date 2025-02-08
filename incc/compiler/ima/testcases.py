@@ -181,8 +181,18 @@ localvar_tests = {"expr": "LocalExpression", "testcases": [
 
 	{"code": """
 		{
+			# Using Variable prior to definition is undefined behavior because it will be seen as global and thus appear in env from start of program
 			x;
 			local y:=2, x:=3 in x+y
+		}
+	""",
+	"expected": 5},
+
+	{"code": """
+		{
+			# Using Variable prior to definition is undefined behavior because it will be seen as global and thus appear in env from start of program
+			local y:=2, x:=3 in x+y;
+			x
 		}
 	""",
 	"expected": Exception},
@@ -447,8 +457,8 @@ lambda_tests = {"expr": "LambdaExpression", "testcases": [
 	{"code": """
 		{
 			local x:=1 in {
-				local x := \(y) -> if (y<1) then 0 else y+x(y-1)
-				in (x(2)) + x
+				(local x := \(y) -> if (y<1) then 0 else y+x(y-1)
+				in x(2)) + x
 			}
 		}
 	""",

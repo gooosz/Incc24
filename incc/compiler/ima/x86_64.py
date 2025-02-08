@@ -208,6 +208,9 @@ def to_x86_64(cma_code, env) :
                 # restores address of local vector from top of stack into r13
                 code += ';;; === restorelocalvec ===\n'
                 code += 'pop   r13\n'
+            case ['pushlocal', j]:
+                code += f';;; === pushlocal {j} ===\n'
+                code += f'push    qword [rsp + {8*int(j)}]\n'
             case ['pushaddr', j]:
                 # on stack is address of vector, push address at index j in that vector onto stack
                 #   | address of vector |
@@ -235,12 +238,27 @@ def to_x86_64(cma_code, env) :
                 for i in range(int(n)):
                     code += alloc_tuple('D') # rdx holds address of object
                     code += 'push   rdx\n'
-            case ['rewrite', j]:
+            case ['rewriteloc', j]:
+                # rewrites the local value with addr j with the values from object on top of stack
+                #   | new value |
+                #   |   ...     | ↓j
+                #   | old value |
+                code += f';;; === rewriteloc {j} ===\n'
+                code += f'mov    qword rdx, [rsp+{8*int(j)}]\n' # holds old dummy values
+                code += 'pop    rax\n' # holds new values
+                # type
+                code += "mov    qword rcx, [rax]\n" # indirection, because nasm can't do double dereference mov [rdx], [rax]
+                code += "mov    qword [rdx], rcx\n"
+                # ptr to object values
+                code += "mov    qword rcx, [rax+8]\n" # indirection, because nasm can't do double dereference mov [rdx+8], [rax+8]
+                code += "mov    qword [rdx+8], rcx\n"
+                # no push here
+            case ['rewriteinvec', j]:
                 # overwrites the values in i-th object in vector with new values
                 # stack looks like:
                 #   |  vector   |
                 #   | new value |
-                code += f';;; === rewrite {j} ===\n'
+                code += f';;; === rewriteinvec {j} ===\n'
                 code += 'pop    rax\n'
                 code += 'mov    qword rdx, [rax+8]\n' # values of vector are at rdx
                 code += 'pop    rcx\n' # new values [' ', ptr]

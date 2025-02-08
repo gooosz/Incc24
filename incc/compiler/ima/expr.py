@@ -15,101 +15,29 @@ operators = {'+': ('add', lambda x,y: x+y),
              }
 
 class CompiledExpression:
-    def code_b(self, env):
-        return self.code_v(env) + "getbasic\n"
+    def code_b(self, env, kp):
+        return self.code_v(env, kp) + "getbasic\n"
         #raise Exception(f"code_b von {self} uninplemented")
-    def code_v(self, env):
-        return self.code_b(env) + "mkbasic\n"
+    def code_v(self, env, kp):
+        return self.code_b(env, kp) + "mkbasic\n"
         #raise Exception(f"code_v von {self} uninplemented")
 
 @dataclass
 class ProgramExpression:
     body: CompiledExpression
 
-    def code_b(self, env):
+    def code_b(self, env, kp):
         ret = ""
-        # create local variables vector of whole program, IMPORTANT: watch out for nested environments when local expression
-
-        # local/global variable vectors fixed by
-        """
-        1. LMAO THIS WORKS:
-            - why isn't it as simple as getting all local variables of program in a flat list
-            - each gets their entry in env
-            - at start of local expression:
-                - the local vars in that expression in env get assigned scope 'local', save old scope (might be global)
-                - save the current local vector on stack to restore it afterwards
-            - at end of local expression:
-                - to avoid use out of scope, the local variables get assigned scope None
-                - restore previous local vector
-            - this implies that local variables with the same name will get shadowed which is fine
-            - Problem when global and local variables have the same name
-                    => this is fine because in environment globals get set after locals, so at start of program global variables are accessed,
-                       but when in local expression the scope gets updated to 'local'
-        """
-
-        """
-        2. new problem:
-            x:=1;
-            local y:=2, x:=3 in x+y
-            - returns 6 instead of 3, when environment has {y: addr=0, x: addr=0} because of global var
-            - works when environment has {x: addr=0, y: addr=1}
-            - the order in environment is mostly random i guess, because a set is unordered
-            => solution: sort the local/global vars by alphabet before assigning in env to always get the same order
-        """
-
-        """
-        3. solutions for getting a correct keyerror when trying to use variable out of scope:
-            1. in ProgramExpression:
-                - sammle alle globalen und lokalen Variablen, weise Adressen hinzu, scope is None because values have not been initialized yet
-            2. in AssignmentExpression/LocalExpression:
-                - setzt die Werte von globaler/lokaler Variable, setzt im Environment scope auf 'global' oder 'local'
-        """
-        all_local_vars = local_vars(self.body) # (nested) list of all local variables in program
-        print(f"all_local_vars: {all_local_vars}")
+        # create global variables vector of whole program
         all_global_vars = free_vars(self.body)
         print(f"global vars: {all_global_vars}")
-        # IMPORTANT: global, local vars with same name must have the same addr or else wrong index is used
-        # e.g.  {
-        #           a := 1;
-        #           x := 2;
-        #           z := local y:=3, x:=4 in x*y;
-        #           x+z
-        #       }
-        #   should be 24 but is 18
-        #
-        #
-        # variables with same name that are global, local, must be added to env first to guarantee correct indices
-        global_local_same_vars = all_local_vars & all_global_vars
-        print(f"global_local_same_vars: {global_local_same_vars}")
-        for i,var in enumerate(global_local_same_vars):
-            env[var] = {'addr': i, 'scope': None, 'size': 8}
-        basic_index = len(global_local_same_vars) # all other vars in environment get addr = basic_index + i
-
-        only_local_vars = all_local_vars - global_local_same_vars
-        print(f"only_local_vars: {only_local_vars}")
-        for i, var in enumerate(only_local_vars):
-            # set scope to None to avoid use out of scope, the scope will get set to 'local' when entering local expression
-            env[var] = {'addr': basic_index+i, 'scope': None, 'size': 8}
-        # create local vector
-        ret += "# setting up local variables of whole program\n"
-        ret += f"alloc {len(all_local_vars)}\n"
-        ret += f"mkvec {len(all_local_vars)}\n"
-        ret += "setlv\n"
-
-
-        # create global variables vector
-        only_global_vars = all_global_vars - global_local_same_vars
-        print(f"only_global_vars: {only_global_vars}")
-        for i, var in enumerate(only_global_vars):
-            env[var] = {'addr': basic_index+i, 'scope': None, 'size': 8}
-        # create global vector
+        # create global vector, in lambda the global vars + old/outer params are written into new global vector, so it must have enough size for both
+        for i,v in enumerate(all_global_vars):
+            env[v] = {'addr': i, 'scope': 'global', 'size': 8} # value not initialized yet, scope gets set to 'global' in AssignmentExpression
         ret += "# setting up global variables\n"
-        ret += f"alloc {len(all_global_vars) + len(all_local_vars) + max_num_params(self.body)}\n"
-        ret += f"mkvec {len(all_global_vars) + len(all_local_vars) + max_num_params(self.body)}\n" # in lambda the local vars + global vars + old/outer params are written into new global vector, so it must have enough size for both
+        ret += f"alloc {len(all_global_vars) + max_num_params(self.body)}\n"
+        ret += f"mkvec {len(all_global_vars) + max_num_params(self.body)}\n"
         ret += "setgv\n"
-        print(f"global vector size: {len(all_global_vars) + len(all_local_vars) + max_num_params(self.body)}")
-
-
 
         # create params vector
         ret += "# setting up params vector\n"
@@ -118,23 +46,22 @@ class ProgramExpression:
         ret += "setpv\n"
         print(f"params vector size: {max_num_params(self.body)}")
 
-        print(f"===env: {env}")
         ret += "# body of program\n"
-        ret += self.body.code_b(env)
+        ret += self.body.code_b(env, kp)
         return ret
 
 @dataclass
 class SelfEvaluatingExpression(CompiledExpression):
     id : CompiledExpression
 
-    def code_b(self, env):
-        print(f"code_b: {self}")
+    def code_b(self, env, kp):
+        print(f"code_b kp={kp}: {self}")
         return f'loadc {self.id}\n'
 
-    def code_v(self, env):
-        print(f"code_v: {self}")
+    def code_v(self, env, kp):
+        print(f"code_v kp={kp}: {self}")
         # legt neue Zelle im Heap ['B',id] an
-        return self.code_b(env) + "mkbasic\n"
+        return self.code_b(env, kp) + "mkbasic\n"
 
 @dataclass
 class BinaryOperatorExpression(CompiledExpression):
@@ -142,10 +69,10 @@ class BinaryOperatorExpression(CompiledExpression):
     op: str
     e2: CompiledExpression
 
-    def code_b(self, env):
-        print(f"code_b: {self}")
-        ret = self.e1.code_b(env)
-        ret += self.e2.code_b(env)
+    def code_b(self, env, kp):
+        print(f"code_b kp={kp}: {self}")
+        ret = self.e1.code_b(env, kp)
+        ret += self.e2.code_b(env, kp+1)
         ret += f"{operators[self.op][0]}\n"
         #return f"# {self}\n" + ret
         return ret
@@ -161,32 +88,15 @@ class BinaryOperatorExpression(CompiledExpression):
 class SequenceExpression(CompiledExpression):
     seq: list[CompiledExpression]
 
-    def code_v(self, env):
-        print(f"code_v: {self}")
+    def code_v(self, env, kp):
+        print(f"code_v kp={kp}: {self}")
         n = len(self.seq)
         ret = ""
-        # pop after every expression if followed by ; and is not assignment (else leads to bug see comment below)
+        # pop after every expression if followed by ;
         for expr in self.seq[:-1]:
-            ret += expr.code_v(env)
-            # TODO: fix Bug
-            #           mkvec 0
-            #           mkfunval lambda_0
-            #           jump end_lambda_0
-            #           lambda_0:
-            #           loadc 2
-            #           mkbasic
-            #           popenv
-            #           end_lambda_0:
-            #           pushglobalvec
-            #           storeaddr 0     <- doesn't leave anything on stack => so the pop1 afterwards will remove random stuff on stack
-            #                              (e.g. old rbp) leading to segfault
-            #                           => FIX: in sequence expression only do pop if the previous expression was not assignment
-            #           pop 1
-            #if type(expr) is not AssignmentExpression:
-            #    ret += f"pop 1\n"
-            # !! Assignment should return it's value/address !!
-            ret += "pop 1\n"
-        ret += self.seq[-1].code_v(env)
+            ret += expr.code_v(env, kp)
+            ret += "pop 1\n" # ; follows so value is disregarded
+        ret += self.seq[-1].code_v(env, kp)
         #return f"# {self}\n" + ret
         return ret
 
@@ -194,10 +104,12 @@ class SequenceExpression(CompiledExpression):
 class VariableExpression(CompiledExpression):
     name: str
 
-    def code_v(self, env):
-        print(f"code_v: {self} in env {env}")
-        # lookup because variable could be defined in parent environment
-        return getvec(self.name, env) + f"pushaddr {lookup(env, self.name)['addr']}\n"
+    def code_v(self, env, kp):
+        print(f"code_v kp={kp}: {self} in env {env}")
+        # lookup because variable could be defined in parent environment or is in global/param vector
+        print(f"Zugriff auf var {self.name} at addr {lookup(env, self.name)['addr']}")
+        return getvar(self.name, env, kp)
+        #return getvec(self.name, env) + f"pushaddr {lookup(env, self.name)['addr']}\n"
 
 
 @dataclass
@@ -205,18 +117,24 @@ class AssignmentExpression(CompiledExpression):
     var: VariableExpression
     value: CompiledExpression
 
-    def code_v(self, env):
-        #if self.var.name not in env:
-            # variable is not stored yet, so get a new address for it
-            # valid scopes: global, local, param
-        #    env[self.var.name] = {'addr': new_addr('global'), 'scope': 'global', 'size': 8}
-        # set scope to global only if variable hasn't been initialized yet (scope = None)
-        # or else f := \(z) -> z:=4; tries to use z as global variable in AssignmentExpression
-        #
-        if env[self.var.name]['scope'] is None:
-            env[self.var.name]['scope'] = 'global' # set scope to 'global' => this means global value got initialized
-        addr = env[self.var.name]['addr']
-        return self.value.code_v(env) + getvec(self.var.name, env) + f"rewrite {addr}\n" #f'storeaddr {addr}\n'
+    def code_v(self, env, kp):
+        var_entry = lookup(env, self.var.name)
+        # only set variable scope to global if it has not been set yet
+        # so in code    f := \(x) -> x:=2;
+        #               f(2)
+        #  x inside lambda is seen as param not as global
+
+        #if var_entry['scope'] is None:
+        #    var_entry['scope'] = 'global' # value of variable got set now
+        addr = var_entry['addr']
+
+        ret = ""
+        #ret = self.var.code_v(env, kp)
+        ret += self.value.code_v(env,kp)
+        ret += rewrite(env, self.var.name, j=addr) # n=0 is optional
+        #ret += "pushglobalvec\n"
+        #ret += f"storeaddr {addr}\n"
+        return ret #f'storeaddr {addr}\n'
 
 @dataclass
 class ITEExpression(CompiledExpression):
@@ -224,33 +142,33 @@ class ITEExpression(CompiledExpression):
     ifbody: CompiledExpression      # code_b or code_v depending on call of ITEExpression
     elsebody: CompiledExpression    # code_b or code_v depending on call of ITEExpression
 
-    def code_b(self, env):
-        print(f"code_b: {self}")
+    def code_b(self, env, kp):
+        print(f"code_b kp={kp}: {self}")
         ite_label, then_label, else_label, end_label = nextlabel(self)
 
         ret  = f"{ite_label}:\n"
-        ret += self.condition.code_b(env)
+        ret += self.condition.code_b(env, kp)
         ret += f"jumpz {else_label}\n"
         ret += f"{then_label}:\n"
-        ret += self.ifbody.code_b(env)
+        ret += self.ifbody.code_b(env, kp)
         ret += f"jump {end_label}\n"
         ret += f"{else_label}:\n"
-        ret += self.elsebody.code_b(env) if self.elsebody is not None else "loadc 0\n" # elsebody doesn't exist => load default 0
+        ret += self.elsebody.code_b(env, kp) if self.elsebody is not None else "loadc 0\n" # elsebody doesn't exist => load default 0
         ret += f"{end_label}:\n"
         return ret
 
-    def code_v(self, env):
-        print(f"code_v: {self}")
+    def code_v(self, env, kp):
+        print(f"code_v kp={kp}: {self}")
         ite_label, then_label, else_label, end_label = nextlabel(self)
 
         ret  = f"{ite_label}:\n"
-        ret += self.condition.code_b(env)
+        ret += self.condition.code_b(env, kp)
         ret += f"jumpz {else_label}\n"
         ret += f"{then_label}:\n"
-        ret += self.ifbody.code_v(env)
+        ret += self.ifbody.code_v(env, kp)
         ret += f"jump {end_label}\n"
         ret += f"{else_label}:\n"
-        ret += self.elsebody.code_v(env) if self.elsebody is not None else "loadc 0\nmkbasic\n" # elsebody doesn't exist => load default 0
+        ret += self.elsebody.code_v(env, kp) if self.elsebody is not None else "loadc 0\nmkbasic\n" # elsebody doesn't exist => load default 0
         ret += f"{end_label}:\n"
         return ret
 
@@ -259,34 +177,34 @@ class WhileExpression(CompiledExpression):
     condition: CompiledExpression
     body: CompiledExpression
 
-    def code_b(self, env):
-        print(f"code_b: {self}")
+    def code_b(self, env, kp):
+        print(f"code_b kp={kp}: {self}")
         while_label, do_label, end_label = nextlabel(self)
         # if condition fails at first check, must return default value 0
         # new iteration discards the old value
         ret  = "loadc 0\n"
         ret += f"{while_label}:\n"
-        ret += self.condition.code_b(env)
+        ret += self.condition.code_b(env, kp+1)
         ret += f"jumpz {end_label}\n"
         ret += f"{do_label}:\n"
         ret += "pop 1\n" # discard value from last iteration
-        ret += self.body.code_b(env)
+        ret += self.body.code_b(env, kp+1)
         ret += f"jump {while_label}\n"
         ret += f"{end_label}:\n"
         return ret
 
-    def code_v(self, env):
-        print(f"code_v: {self}")
+    def code_v(self, env, kp):
+        print(f"code_v kp={kp}: {self}")
         while_label, do_label, end_label = nextlabel(self)
         # if condition fails at first check, must return default value 0
         # new iteration discards the old value
         ret  = "loadc 0\n"
         ret += f"{while_label}:\n"
-        ret += self.condition.code_b(env)
+        ret += self.condition.code_b(env, kp+1)
         ret += f"jumpz {end_label}\n"
         ret += f"{do_label}:\n"
         ret += "pop 1\n" # discard value from last iteration
-        ret += self.body.code_v(env)
+        ret += self.body.code_v(env, kp+1)
         ret += f"jump {while_label}\n"
         ret += f"{end_label}:\n"
         return ret
@@ -299,19 +217,19 @@ class LoopExpression(CompiledExpression):
     loopvar: CompiledExpression
     body: CompiledExpression
 
-    def code_b(self, env):
-        print(f"code_b: {self}")
+    def code_b(self, env, kp):
+        print(f"code_b kp={kp}: {self}")
         loop_label, do_label, end_label = nextlabel(self)
 
         ret = "loadc 0\n" # default value in case loop body doesnt get executed
-        ret += self.loopvar.code_b(env)
+        ret += self.loopvar.code_b(env, kp+1)
         ret += f"{loop_label}:\n"
         ret += "dup\n"    # duplicate the loopvar because the jumpz later on will delete one
         ret += f"jumpz {end_label}\n"
         ret += "swap\n"   # swap 1. and 2. value on stack
         ret += "pop 1\n"  # remove old iteration value
         ret += f"{do_label}:\n"
-        ret += self.body.code_b(env)    # push new iteration value
+        ret += self.body.code_b(env, kp+1)    # push new iteration value
         ret += "swap\n" # swap, so that loopvar is on top of stack
         ret += "dec\n"  # decrement top value (loopvar) of stack
         ret += f"jump {do_label}\n"   # check loopvar if next iteration
@@ -319,20 +237,20 @@ class LoopExpression(CompiledExpression):
         ret += "pop 1\n"  # final pop because loopvar is on top of stack
         return ret
 
-    def code_v(self, env):
-        print(f"code_v: {self}")
+    def code_v(self, env, kp):
+        print(f"code_v kp={kp}: {self}")
         loop_label, do_label, end_label = nextlabel(self)
 
         ret = "loadc 0\n" # default value in case loop body doesnt get executed
         ret += "mkbasic\n"
-        ret += self.loopvar.code_b(env)
+        ret += self.loopvar.code_b(env, kp+1)
         ret += f"{loop_label}:\n"
         ret += "dup\n"    # duplicate the loopvar because the jumpz later on will delete one
         ret += f"jumpz {end_label}\n"
         ret += "swap\n"   # swap 1. and 2. value on stack
         ret += "pop 1\n"  # remove old iteration value
         ret += f"{do_label}:\n"
-        ret += self.body.code_v(env)    # push new iteration value
+        ret += self.body.code_v(env, kp+1)    # push new iteration value
         ret += "swap\n" # swap, so that loopvar is on top of stack
         ret += "dec\n"  # decrement top value (loopvar) of stack
         ret += f"jump {loop_label}\n"   # check loopvar if next iteration
@@ -360,107 +278,23 @@ class LocalExpression(CompiledExpression):
         r14: param vector
     """
 
-    def code_v(self, env):
+    def code_v(self, env, kp):
         # local variables only get created in let block, nowhere else
-        print(f"code_v: {self}")
-        print(f"in local env: {env}")
+        print(f"code_v kp={kp}: {self}")
         n = len(self.localvars)
 
-        ret = ""
-
-        """
-            1. add each local variable to environment (set scope to 'local')
-            2. evaluate each local variable expression
-        this order is important to allow recursion
-        """
-        old_scopes = {} # old scopes of local variables, needed at end of local expression so a global variables that got shadowed gets 'global' scope again
-        for var, val in self.localvars:
-            # set scope to local, this is needed, e.g.
-            #   local x in 1; <- after that env['x'] has scope None to avoid use out of scope
-            #   local x in 2  <- needs to access a new x
-            #
-            #
-            print(f"localvar: {var} = {val}")
-            old_scopes[var] = env[var]['scope'] # save old scope of var
-            # store those that have an old scope 'local' on stack, so they are not overwritten in inside local expression
-            # and put them back into local vector after local expression
-            # so the old value is preserved/restored after local expression
-            if old_scopes[var] == 'local':
-                ret += "# save old local values\n"
-                ret += "pushlocalvec\n"
-                ret += f"pushaddr {env[var]['addr']}\n"
-            env[var]['scope'] = 'local' # set scope to 'local' => this means local value got initialized
-        print(f"old_scopes: {old_scopes}")
-
-        # No need to store the old local vector on stack, because local vector holds space for all local vars in whole program
-        # + the one who are accessible are set to 'local' scope
-        #ret += "pushlocalvec\n" # save old local vector on stack,
-        # TODO: create a copy with new allocated objects of local var
-        # so shadowing x inside 2 local expression works correctly
-        # the code:
-        #           local x:=2 in {
-        #               local x:=3 in {
-	#			x
-	#		} + x
-	#           }
-        #   prints 6 instead of 5, because the value in local vector got overwritten
-        #
-
-
-        for var, value in self.localvars:
-            # evaluate each local expression
-            ret += f"{value.code_v(env)}"
-            # writes the address at top of stack into local vector at index i => local var gets it's value assigned
-            ret += "pushlocalvec\n"
-            """
-                Problem:
-                    use rewrite: allows recursion, breaks restoring value after local got shadowed
-                    use storeaddr: doesn't allow recursion, allows restoring value after local got shadowed
-
-            """
-            ret += f"# scope of {var}: {env[var]['scope']}\n"
-            ret += f"rewrite {env[var]['addr']}\n" # must be rewrite so recursion works (uses dummy value in local/function global vector)
-            #ret += f"storeaddr {env[var]['addr']}\n"
-            ret += "pop 1\n" # only store value into locals vector, return value of storeaddr is not used/needed
-            """
-            Idea:
-                - instead of storeaddr, do a rewrite at that addr
-                - mkvec creates a vector with n values and fills it with dummy values ['D', 0]
-                - assignment and here will rewrite instead of store, so recursion and changing global vars works
-                - rewrite i needs stack to look like:   |  vector   |
-                                                        | new value |
-                  rewrite goes to index i in vector and changes the value from ['D', 0] to the 2 values of new value
-            """
+        ret = f"alloc {n}\n" # empty/dummy objects, get rewritten later on, so recursion works
+        env2 = {'parent': env}
+        for i, [var, val] in enumerate(self.localvars):
+            print(f"localvar {i}, kp={kp}: {var} = {val}")
+            env2[var] = {'addr': kp+i+1, 'scope': 'local', 'size': 8}
+        for i, [var, val] in enumerate(self.localvars):
+            ret += f"{val.code_v(env2, kp+n)}"
+            ret += rewrite(env2, var, n, i) # gets the correct statements (must differ between local and global/param because the latter use vectors)
         # evaluate body
         ret += "# local body\n"
-        ret += f"{self.body.code_v(env)}"
-        # no need for slide because local vars are stored in r13 locals vector not on stack
-        #ret += "swap\n" # swap return value with old local vector, so old local vector is on top of stack and can be restored next
-        #ret += f"restorelocalvec\n" # resets to old local vector
-
-        # set all scopes of used local variables to old scope
-        # and store the original values (saved on stack) back into local vector, must do it in reverse to preserve order
-        for var, val in reversed(self.localvars):
-            # only reset scope if old scope is not None
-            # so the program
-            #       f := \() -> x:=5;
-            #       f();
-            #       x
-            # defines the global variable x as valid/'global' correctly
-            print(f"{var}: current scope {env[var]['scope']}, old scope {old_scopes[var]}")
-            env[var]['scope'] = old_scopes[var]
-            # stack after local expression looks like:
-            #   | return value |
-            #   |  old local 3 |
-            #   |  old local 2 |
-            #   |  old local 1 |
-            if old_scopes[var] == 'local':
-                ret += "# restore old local values\n"
-                ret += "swap\n"
-                ret += "pushlocalvec\n"
-                ret += f"storeaddr {env[var]['addr']}\n"
-                ret += "pop 1\n"
-            #ret += "swap\n"
+        ret += f"{self.body.code_v(env2, kp+n)}"
+        ret += f"slide {n}\n" # remove the local vars from stack
         return f"# Start of {self}\n" + ret + f"# End of {self}\n"
 
 
@@ -473,8 +307,8 @@ class CallExpression(CompiledExpression):
     procname: CompiledExpression
     params: list[CompiledExpression]
 
-    def code_v(self, env):
-        print(f"code_v: {self}")
+    def code_v(self, env, kp):
+        print(f"code_v kp={kp}: {self}")
         call_return_label = nextlabel(self)
 
         n = len(self.params)
@@ -482,11 +316,11 @@ class CallExpression(CompiledExpression):
         ret += f"mark {call_return_label}\n"
         # run code_v of each param, fill param vector
         for i in range(n):
-            ret += f"{self.params[i].code_v(env)}"
+            ret += f"{self.params[i].code_v(env, kp+3)}" # params get stored in param vector, not on stack
             ret += "pushparamvec\n"
             ret += f"storeaddr {i}\n" # must be storeaddr instead of rewrite, so changing parameter value changes the value globally
             ret += "pop 1\n" # only store value into param vector so return value of storeaddr is not needed
-        ret += f"{self.procname.code_v(env)}"
+        ret += f"{self.procname.code_v(env, kp+3)}"
         ret += "apply\n"
         ret += f"{call_return_label}:\n"
         return ret
@@ -510,21 +344,17 @@ class LambdaExpression(CompiledExpression):
         r13: local vector
         r14: param vector
     """
-    def code_v(self, env):
-        print(f"code_v: {self}")
+    def code_v(self, env, kp):
+        print(f"code_v kp={kp}: {self}")
         lambda_label, end_lambda = nextlabel(self)
 
         # free variables = global variables | current params
         # get put into a new global vector, that is given to lambda
 
-        freevars = sorted(free_vars(self)) # get free variables of lambda expression, sort them to avoid index issues
+        freevars = free_vars(self) # get free variables of lambda expression
         print(f"> free_vars {freevars} in {self}")
         n = len(freevars)
         ret = ""
-        outside_vars = [x for x in freevars if env[x]['scope'] is not None] # only variables that are already defined outside lambda
-        print(f"> outside_vars {outside_vars}")
-        # so outside_vars = free_vars - (global vars that are defined in lambda and not outside)
-
         """
             TODO: KeyError when a new global variable is defined inside lambda, that has not been named outside lambda before
                         f := \() -> {
@@ -539,48 +369,23 @@ class LambdaExpression(CompiledExpression):
             something like:
 
         """
-
-
-        # filling new global vector with all free vars must happen inside lambda because else the global vector outside lambda gets overwritten and
-        # and code like
-        #   y:=2
-        #   f := \(x) -> x;
-        #   1+y;
-        #   f(56)
-        # wouldn't work because lambda isn't immediately called after definition
-        # => set new global vector only if jumped inside lambda
-        #
-
-        """
-            Solution:
-                - rewrite instead of storeaddr
-                    => global variables can be modified inside lambda
-                    => recursive lambdas work
-                - rewrite pushes the address of changed object back to stack
-        """
-
         # put all free vars in new gp for lambda in reverse, so order in vector is preserved
         # fill new global vector with values of all free variables and create new environment
         # add those to new environment
-        env2 = {}
-        for i,v in reversed(sorted(enumerate(freevars))):
+        for i,v in reversed(list(enumerate(freevars))):
             #push address of free variables into vector in reverse, so adding it to a vector is easier
-            ret += f"### fill {i}, {v}\n"
-            ret += f"{getvec(v, env)}"
-            ret += f"pushaddr {env[v]['addr']}\n"
-            #ret += f"pushaddr {lookup(env, v)['addr']}\n" # put address to value onto stack
-            env2[v] = {'addr': i, 'scope': 'global', 'size': 8} # all free vars (global variables/params) become global now
+            ret += getvar(v, env, kp)
         ret += f"mkvec {n}\n" # fills a new vector with n values on stack
-
-        # add params to new environment
-        for i,v in enumerate(self.params):
-            env2[v] = {'addr': i, 'scope': 'param', 'size': 8}
-        print(f"lambda env: {env2}")
-
         ret += f"mkfunval {lambda_label}\n" # creates function object ['F', ptr] -> [addr, newly filled global vector]
         ret += f"jump {end_lambda}\n"
         ret += f"{lambda_label}:\n"
-        ret += f"{self.body.code_v(env2)}"
+        env2 = {}
+        for i,v in enumerate(freevars):
+            env2[v] = {'addr': i, 'scope': 'global', 'size': 8} # all free vars (global/former local variables) become global now
+        for i,v in enumerate(self.params):
+            env2[v] = {'addr': i, 'scope': 'param', 'size': 8} # add params to new environment
+        print(f"lambda env: {env2}")
+        ret += f"{self.body.code_v(env2, 0)}"
         ret += "popenv\n"
         ret += f"{end_lambda}:\n"
         #return f"# {self}\n# env: {env2}\n" + ret
@@ -632,6 +437,23 @@ def getvec(var, env):
         case {'scope': 'param', 'addr': j, 'size': _}:  return f"pushparamvec\n"
         case _: raise Exception(f"Variable {var} not defined in {env}") # scope None means variable is out of scope / hasn't been initialized yet => cannot use it
 
+# push address of variable onto stack
+# checks if var is global/local/param
+def getvar(var, env, kp):
+    match lookup(env, var):
+        case {'scope': 'local', 'addr': j, 'size': _}:  return f"# getvar({var}, {env}, {kp}), addr={j}\npushlocal {kp-j}\n"
+        case {'scope': 'global', 'addr': j, 'size': _}: return "pushglobalvec\n" + f"pushaddr {j}\n"
+        case {'scope': 'param', 'addr': j, 'size': _}:  return "pushparamvec\n" + f"pushaddr {j}\n"
+        case _: raise Exception(f"Variable {var} not defined in {env}")
+
+# on stack is pointer to new object
+# function rewrites the object at pos i in stack with the new values on top of stack
+def rewrite(env, var, n=1, j=0):
+    match lookup(env, var):
+        case {'scope': 'local', 'addr': _, 'size': _}:  return f"rewriteloc {n-j}\n"
+        case {'scope': 'global', 'addr': _, 'size': _}: return "pushglobalvec\n" + f"rewriteinvec {j}\n"
+        case {'scope': 'param', 'addr': _, 'size': _}:  return "pushparamvec\n" + f"rewriteinvec {j}\n"
+
 # returns entry of variable in env or it's parent if exists
 def lookup(env, name):
     if name in env:
@@ -675,30 +497,6 @@ def free_vars(expr):
         case CallExpression(name, params):          return free_vars(name).union(*(free_vars(p) for p in params))
         case _:                                     raise Exception(f"free_vars({expr}) wrong")
 
-# returns set of variables (local + global) that are defined in expr
-# used because free_vars(expr) reports x in code
-#   f := \() -> {
-#       x:=5
-#   };
-#   f()
-# as free variable even though it is bound to,defined in lambda
-# so TODO: in lambda freevars = free_vars(body) - var_assigns(body)
-# to correctly get only the variable defined outside lambda as free variables
-def var_assigns(expr):
-    match expr:
-        case SelfEvaluatingExpression(x):           return set()
-        case VariableExpression(x):                 return {x} # WARNING
-        case BinaryOperatorExpression(e1, op, e2):  return var_assigns(e1) | var_assigns(e2)
-        case SequenceExpression(seq):               return {x for el in seq for x in var_assigns(el)}
-        case AssignmentExpression(var, val):        return var_assigns(var) | var_assigns(val)
-        case ITEExpression(condition, ifbody, None): return var_assigns(condition) | var_assigns(ifbody)
-        case ITEExpression(condition, ifbody, elsebody): return var_assigns(condition) | var_assigns(ifbody) | var_assigns(elsebody)
-        case WhileExpression(condition, body):      return var_assigns(condition) | var_assigns(body)
-        case LoopExpression(loopvar, body):         return var_assigns(loopvar) | var_assigns(body)
-        case LocalExpression(localvars, body):      return var_assigns(body) + {x for x,e in localvars}  # WARNING
-        case LambdaExpression(params, body):        return var_assigns(body) + {x for x in params}     # WARNING
-        case CallExpression(name, params):          return var_assigns(name).union(*(var_assigns(p) for p in params))
-        case _:                                     raise Exception(f"var_assigns({expr}) wrong")
 
 # returns set of local variables of whole program
 def local_vars(expr):
