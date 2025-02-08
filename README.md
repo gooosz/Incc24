@@ -7,7 +7,9 @@ Here are some features of the InCC24 programming language:
 - multiparadigm: imperative, functional
 - currently: only supports printing out integer result of program (no prior printing, string, data structures, etc.)
 
-BNF of InCC24:
+BNF of InCC24: <br/>
+A program consists of \< ProgramExpression \> | \< Expression \> <br/>
+where
 
 - ProgramExpression ::= \< Expression \>
 - SelfEvaluatingExpression ::= \< CONSTANT \>
