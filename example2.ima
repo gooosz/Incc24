@@ -1,81 +1,56 @@
 # setting up global variables
-alloc 1
-mkvec 1
+alloc 3
+mkvec 3
 setgv
 # setting up params vector
 alloc 1
 mkvec 1
 setpv
 # body of program
-# Start of LocalExpression(localvars=[('x', SelfEvaluatingExpression(id=1))], body=SequenceExpression(seq=[BinaryOperatorExpression(e1=LocalExpression(localvars=[('x', LambdaExpression(params=['y'], body=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=0), elsebody=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=CallExpression(procname=VariableExpression(name='x'), params=[BinaryOperatorExpression(e1=VariableExpression(name='y'), op='-', e2=SelfEvaluatingExpression(id=1))])))))], body=CallExpression(procname=VariableExpression(name='x'), params=[SelfEvaluatingExpression(id=2)])), op='+', e2=VariableExpression(name='x'))]))
-alloc 1
-loadc 1
-mkbasic
-rewriteloc 1
-# local body
-# Start of LocalExpression(localvars=[('x', LambdaExpression(params=['y'], body=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=0), elsebody=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=CallExpression(procname=VariableExpression(name='x'), params=[BinaryOperatorExpression(e1=VariableExpression(name='y'), op='-', e2=SelfEvaluatingExpression(id=1))])))))], body=CallExpression(procname=VariableExpression(name='x'), params=[SelfEvaluatingExpression(id=2)]))
-alloc 1
-# getvar(x, {'parent': {'parent': {}, 'x': {'addr': 1, 'scope': 'local', 'size': 8}}, 'x': {'addr': 2, 'scope': 'local', 'size': 8}}, 2), addr=2
-pushlocal 0
+pushglobalvec
+pushaddr 1
 mkvec 1
-mkfunval lambda_18
-jump end_lambda_18
-lambda_18:
-ite_5:
+mkfunval lambda_19
+jump end_lambda_19
+lambda_19:
+mkvec 0
+mkfunval lambda_20
+jump end_lambda_20
+lambda_20:
 pushparamvec
 pushaddr 0
-getbasic
-loadc 1
-le
-jumpz else_5
-then_5:
-loadc 0
-mkbasic
-jump endite_5
-else_5:
-pushparamvec
-pushaddr 0
-getbasic
-mark back_from_call_23
-pushparamvec
-pushaddr 0
-getbasic
-loadc 1
-sub
-mkbasic
-pushparamvec
-storeaddr 0
+popenv
+end_lambda_20:
+pushglobalvec
+rewriteinvec 0
 pop 1
+mark back_from_call_25
+loadc 2
+mkbasic
+mkvec 1
+setpv
 pushglobalvec
 pushaddr 0
 apply
-back_from_call_23:
+back_from_call_25:
 getbasic
-add
-mkbasic
-endite_5:
-popenv
-end_lambda_18:
-rewriteloc 1
-# local body
-mark back_from_call_24
-loadc 2
-mkbasic
 pushparamvec
-storeaddr 0
-pop 1
-# getvar(x, {'parent': {'parent': {}, 'x': {'addr': 1, 'scope': 'local', 'size': 8}}, 'x': {'addr': 2, 'scope': 'local', 'size': 8}}, 5), addr=2
-pushlocal 3
-apply
-back_from_call_24:
-slide 1
-# End of LocalExpression(localvars=[('x', LambdaExpression(params=['y'], body=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=0), elsebody=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=CallExpression(procname=VariableExpression(name='x'), params=[BinaryOperatorExpression(e1=VariableExpression(name='y'), op='-', e2=SelfEvaluatingExpression(id=1))])))))], body=CallExpression(procname=VariableExpression(name='x'), params=[SelfEvaluatingExpression(id=2)]))
-getbasic
-# getvar(x, {'parent': {}, 'x': {'addr': 1, 'scope': 'local', 'size': 8}}, 2), addr=1
-pushlocal 1
+pushaddr 0
 getbasic
 add
 mkbasic
-slide 1
-# End of LocalExpression(localvars=[('x', SelfEvaluatingExpression(id=1))], body=SequenceExpression(seq=[BinaryOperatorExpression(e1=LocalExpression(localvars=[('x', LambdaExpression(params=['y'], body=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='<', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=0), elsebody=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=CallExpression(procname=VariableExpression(name='x'), params=[BinaryOperatorExpression(e1=VariableExpression(name='y'), op='-', e2=SelfEvaluatingExpression(id=1))])))))], body=CallExpression(procname=VariableExpression(name='x'), params=[SelfEvaluatingExpression(id=2)])), op='+', e2=VariableExpression(name='x'))]))
+popenv
+end_lambda_19:
+pushglobalvec
+rewriteinvec 0
+pop 1
+mark back_from_call_26
+loadc 1
+mkbasic
+mkvec 1
+setpv
+pushglobalvec
+pushaddr 0
+apply
+back_from_call_26:
 getbasic

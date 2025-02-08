@@ -462,7 +462,18 @@ lambda_tests = {"expr": "LambdaExpression", "testcases": [
 			}
 		}
 	""",
-	"expected": 4}
+	"expected": 4},
+
+	{"code": """
+		{
+			f := \(x) -> {
+				g := \(y) -> y;
+				g(2) + x
+			};
+			f(1)
+		}
+	""",
+	"expected": 3}
 
 	]}
 

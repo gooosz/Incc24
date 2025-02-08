@@ -297,6 +297,7 @@ def to_x86_64(cma_code, env) :
                 code += 'pop    rax\n' # return value save for later
                 code += 'pop    rcx\n' # Rücksprungadresse
                 code += 'pop    rbp\n' # restore old frame pointer
+                code += 'pop    r14\n' # restore old param vector
                 code += 'pop    r12\n' # restore old global vector
                 code += 'push   rax\n' # put return value onto stack again
                 code += 'jmp    rcx\n'  # return to Rücksprungadresse
@@ -309,6 +310,7 @@ def to_x86_64(cma_code, env) :
                 #   | old global vector   |
                 code += f';;; === mark {A} ===\n'
                 code += 'push   r12\n'
+                code += 'push   r14\n'
                 code += 'push   rbp\n'
                 code += f'push   {A}\n'
                 code += 'mov    rbp, rsp\n'

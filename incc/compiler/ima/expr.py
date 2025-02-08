@@ -313,14 +313,19 @@ class CallExpression(CompiledExpression):
 
         n = len(self.params)
         ret = ""
-        ret += f"mark {call_return_label}\n"
+        ret += f"mark {call_return_label}\n" # saves old param vector as well to recover later on
+        # TODO: save old param vector values on stack to recover later on
         # run code_v of each param, fill param vector
-        for i in range(n):
-            ret += f"{self.params[i].code_v(env, kp+3)}" # params get stored in param vector, not on stack
-            ret += "pushparamvec\n"
-            ret += f"storeaddr {i}\n" # must be storeaddr instead of rewrite, so changing parameter value changes the value globally
-            ret += "pop 1\n" # only store value into param vector so return value of storeaddr is not needed
-        ret += f"{self.procname.code_v(env, kp+3)}"
+        for i in reversed(range(n)):
+            ret += f"{self.params[i].code_v(env, kp+4+i)}" # params get stored in param vector, not on stack
+            #ret += "pushparamvec\n"
+            #ret += f"storeaddr {i}\n" # must be storeaddr instead of rewrite, so changing parameter value changes the value globally
+            #ret += "pop 1\n" # only store value into param vector so return value of storeaddr is not needed
+        # create a new param vector, so old params are saved across nested lambdas
+        ret += f"mkvec {n}\n"
+        ret += "setpv\n"
+
+        ret += f"{self.procname.code_v(env, kp+4)}"
         ret += "apply\n"
         ret += f"{call_return_label}:\n"
         return ret
