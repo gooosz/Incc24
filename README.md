@@ -17,7 +17,7 @@ where
 - SequenceExpression ::= { \< ExpressionList \> }
 - VariableExpression ::= \< STRING \>
 - AssignmentExpression ::= \< VariableExpression \> := \< Expression \>
-- ITEExpression ::= if (\< Expression \>) then \< Expression \> \[ else \< Expression \> \]
+- ITEExpression ::= if (\< Expression \>) then \< Expression \> | if (\< Expression \>) then \< Expression \> else \< Expression \>
 - WhileExpression ::= while (\< Expression \>) do \< Expression \>
 - LoopExpression ::= loop \< Expression \> do \< Expression \>
 - LocalExpression ::= local \< AssignmentList \> in \< Expression \>
