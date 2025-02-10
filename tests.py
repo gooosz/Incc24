@@ -19,9 +19,7 @@ import subprocess
 # testcases
 from incc.compiler.ima.testcases import *
 
-testfilename = "example2"
-
-def compileCode(code, args, filename):
+def compileCode(code, args):
         env = {}
         lexer = lex()
         parser = yacc(start='program')
@@ -59,36 +57,33 @@ def compileCode(code, args, filename):
                 ast = optimizations.deadCodeElimination(ast)
 
 
-        file = testfilename
+        file = args.output
         code_ir = ast.code_b(env, 0)  # always generate intermediate representation, but write only to file if specified by cma/mama flag
         print(f"main env: {env}")
-        if args.cma:
-                # write cma code to file
-                with open(f"./{file}.cma","w") as cma_code:
-                        cma_code.write(code_ir)
-        if args.mama:
-                # write mama code to file
-                with open(f"./{file}.mama","w") as mama_code:
-                        mama_code.write(code_ir)
-        if args.ima:
-                # write ima code to file
-                with open(f"./{file}.ima","w") as ima_code:
-                        ima_code.write(code_ir)
+        match args.ir:
+                case 'cma':
+                        # write cma code to file
+                        with open(f"./{file}.cma","w") as cma_code:
+                                cma_code.write(code_ir)
+                case 'mama':
+                        # write mama code to file
+                        with open(f"./{file}.mama","w") as mama_code:
+                                mama_code.write(code_ir)
+                case 'ima':
+                        # write ima code to file
+                        with open(f"./{file}.ima","w") as ima_code:
+                                ima_code.write(code_ir)
+        # because we are running testcases: always create asm + exe files
+        code_x86  = to_x86_64(code_ir, env)
+        with open(f"./{file}.s","w") as program_code:
+                program_code.write(x86_program(code_x86, env))
 
+        # generate object file
+        os.system(f"nasm -f elf64 {file}.s -g -F dwarf")
 
-        if args.asm or args.obj or args.exe:
-                # write asm code to file
-                code_x86  = to_x86_64(code_ir, env)
-                with open(f"./{file}.s","w") as program_code:
-                        program_code.write(x86_program(code_x86, env))
+        # generate executable
+        os.system(f"gcc -o {file} {file}.o -no-pie -ggdb -gdwarf")
 
-        if args.obj or args.exe:
-                # generate object file
-                os.system(f"nasm -f elf64 {file}.s -g -F dwarf")
-
-        if args.exe or all(arg is None for arg in vars(args).values()):
-                # generate executable
-                os.system(f"gcc -o {file} {file}.o -no-pie -ggdb -gdwarf")
 
 def runExecutable(executable):
         # run the executable and return the output
@@ -112,8 +107,8 @@ def runTests(args):
                                 if expected is Exception:
                                         # test if an Exception (for now any Exception) is thrown
                                         try:
-                                                compileCode(code, args, testfilename)
-                                                output = runExecutable(testfilename)
+                                                compileCode(code, args)
+                                                output = runExecutable(args.output)
                                                 if type(output) is not type(expected):
                                                         print(f"Error at index {i} in {exprtests['expr']}: {code} has output {output}, but should be {expected}")
                                                         return
@@ -122,10 +117,10 @@ def runTests(args):
                                                 print(f"Testcase {i} passed✅")
                                 else:
                                         # test normal result value
-                                        compileCode(code, args, testfilename)
+                                        compileCode(code, args)
 
                                         try:
-                                                output = runExecutable(testfilename)
+                                                output = runExecutable(args.output)
                                         except subprocess.CalledProcessError as e:
                                                 # error when running executable, mostly segfault
                                                 print(f"{exprtests['expr']} {i}: {code}")
@@ -148,7 +143,7 @@ flags specify:
 You can chain the different steps together like --cma --obj will generate all files from incc24 to object file
 """
 
-def addOptimizationFlags(argparser):
+"""def addOptimizationFlags(argparser):
         argparser.add_argument('-O1', action='store_true', help='local optimizations, such as constantfolding')
         argparser.add_argument('-O2', action='store_true', help='global optimizations')
         argparser.add_argument('--optimizeir', action='store_true', help='Optimize intermediate representation')
@@ -178,5 +173,5 @@ if __name__ == '__main__':
     args = argparser.parse_args()
     print(f"-- {args.e}")
     #main(args)
-    runTests(args)
+    runTests(args)"""
 

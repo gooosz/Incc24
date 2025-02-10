@@ -1,56 +1,21 @@
 # setting up global variables
-alloc 3
-mkvec 3
-setgv
-# setting up params vector
 alloc 1
 mkvec 1
-setpv
+setgv
 # body of program
-pushglobalvec
-pushaddr 1
-mkvec 1
-mkfunval lambda_19
-jump end_lambda_19
-lambda_19:
-mkvec 0
-mkfunval lambda_20
-jump end_lambda_20
-lambda_20:
-pushparamvec
-pushaddr 0
-popenv
-end_lambda_20:
-pushglobalvec
-rewriteinvec 0
-pop 1
-mark back_from_call_25
-loadc 2
-mkbasic
-mkvec 1
-setpv
-pushglobalvec
-pushaddr 0
-apply
-back_from_call_25:
-getbasic
-pushparamvec
-pushaddr 0
-getbasic
-add
-mkbasic
-popenv
-end_lambda_19:
-pushglobalvec
-rewriteinvec 0
-pop 1
-mark back_from_call_26
+mark back_from_call_29
 loadc 1
 mkbasic
 mkvec 1
 setpv
-pushglobalvec
+mkvec 0
+mkfunval lambda_23
+jump end_lambda_23
+lambda_23:
+pushparamvec
 pushaddr 0
+popenv
+end_lambda_23:
 apply
-back_from_call_26:
+back_from_call_29:
 getbasic

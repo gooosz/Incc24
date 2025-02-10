@@ -33,18 +33,13 @@ class ProgramExpression:
         print(f"global vars: {all_global_vars}")
         # create global vector, in lambda the global vars + old/outer params are written into new global vector, so it must have enough size for both
         for i,v in enumerate(all_global_vars):
-            env[v] = {'addr': i, 'scope': 'global', 'size': 8} # value not initialized yet, scope gets set to 'global' in AssignmentExpression
+            env[v] = {'addr': i, 'scope': 'global', 'size': 8}
         ret += "# setting up global variables\n"
         ret += f"alloc {len(all_global_vars) + max_num_params(self.body)}\n"
         ret += f"mkvec {len(all_global_vars) + max_num_params(self.body)}\n"
         ret += "setgv\n"
 
-        # create params vector
-        ret += "# setting up params vector\n"
-        ret += f"alloc {max_num_params(self.body)}\n"
-        ret += f"mkvec {max_num_params(self.body)}\n"
-        ret += "setpv\n"
-        print(f"params vector size: {max_num_params(self.body)}")
+        # params vector gets created and set in every call expression
 
         ret += "# body of program\n"
         ret += self.body.code_b(env, kp)
@@ -129,12 +124,11 @@ class AssignmentExpression(CompiledExpression):
         addr = var_entry['addr']
 
         ret = ""
-        #ret = self.var.code_v(env, kp)
         ret += self.value.code_v(env,kp)
         ret += rewrite(env, self.var.name, j=addr) # n=0 is optional
         #ret += "pushglobalvec\n"
         #ret += f"storeaddr {addr}\n"
-        return ret #f'storeaddr {addr}\n'
+        return ret
 
 @dataclass
 class ITEExpression(CompiledExpression):
@@ -300,10 +294,6 @@ class LocalExpression(CompiledExpression):
 
 @dataclass
 class CallExpression(CompiledExpression):
-    # Caller
-    # used for calling a function
-    # so when e.g. f(1,2) is written
-    # knows the name of caller, given parameters
     procname: CompiledExpression
     params: list[CompiledExpression]
 
@@ -333,7 +323,6 @@ class CallExpression(CompiledExpression):
 
 @dataclass
 class LambdaExpression(CompiledExpression):
-    # has a list of formal parameters, body
     params: list()      # may be empty
     body: CompiledExpression
 
@@ -353,7 +342,7 @@ class LambdaExpression(CompiledExpression):
         print(f"code_v kp={kp}: {self}")
         lambda_label, end_lambda = nextlabel(self)
 
-        # free variables = global variables | current params
+        # free variables = global variables + current locals + current params
         # get put into a new global vector, that is given to lambda
 
         freevars = free_vars(self) # get free variables of lambda expression
@@ -378,7 +367,6 @@ class LambdaExpression(CompiledExpression):
         # fill new global vector with values of all free variables and create new environment
         # add those to new environment
         for i,v in reversed(list(enumerate(freevars))):
-            #push address of free variables into vector in reverse, so adding it to a vector is easier
             ret += getvar(v, env, kp)
         ret += f"mkvec {n}\n" # fills a new vector with n values on stack
         ret += f"mkfunval {lambda_label}\n" # creates function object ['F', ptr] -> [addr, newly filled global vector]

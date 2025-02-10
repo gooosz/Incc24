@@ -24,158 +24,16 @@ import argparse
 import os
 import copy
 
-def main(args):
-        rho = {}
+# testcases
+from tests import *
+
+def main(incc_file, args):
+        env = {}
         lexer = lex()
         parser = yacc(start='program')
-        ima_test = """
-                3+(4*5)
-        """
-        ima_seq = """
-        {
-                2+3; 6*3
-        }
-        """
-        ima_globalvar = """
-        {
-                x:=2; y:=3; z:=x*y
-        }
-        """
-        ima_constantfolding = """
-        {
-                x:=3*6; y:=2*x
-        }
-        """
-        ima_constantpropagating = """
-        {
-                x:=3; y:=x*2; z:=y+x
-        }
-        """
-        ima_deadcodeelimination = """
-        {
-                x:=2; y:=3+x; z:=y
-        }
 
-        """
-        ima_deadcodeelimination2 = """
-        {
-                x:=2; y:=x*2; 7
-        }
-
-        """
-        ima_ite = """
-        {
-                x:=2;
-                y:=0;
-                if (x==0) then {
-                        3
-                } else {
-                        7
-                }
-        }
-
-        """
-        ima_while = """
-        {
-                x:=2;
-                y:=0;
-                while (x>=0) do {
-                        x := x-1
-                }
-        }
-
-        """
-        ima_while2 = """
-        {
-                x:=2;
-                while (x>=0) do {
-                        y := 1;
-                        while (y>=0) do {
-                                y := y-1
-                        };
-                        x * 10
-                }
-        }
-
-        """
-        ima_loop = """
-        {
-                x:=34;
-                loop x do {
-                        x:=x+1
-                }
-        }
-
-        """
-        ima_local = """
-        {
-                local x:=2 in x
-        }
-        """
-        bug_ima_local2 = """
-        {
-                local x:=1
-                in local y:=2 in x+y
-        }
-        """
-        bug_ima_local3 = """
-        {
-                local x:=1
-                in {
-                        x + local y:=2 in x+y
-                }
-        }
-        """
-        ima_lambda = """
-        {
-                # TODO: y in global vector for lambda
-                local y:=1 in f := \(x) -> x+y;
-                f(2)
-        }
-        """
-        ima_lambda2 = """
-        {
-                y:=2;
-                f := \() -> {
-                        x:=y+1
-                };
-                f()
-        }
-        """
-        ima_lambda3 = """
-        {
-                f := \(y) -> {
-                        local x:=5 in x;
-                        x:=4
-                };
-                f(2)
-        }
-        """
-        ima_lambda4 = """
-        {
-                f := \() -> {
-                        x:=4
-                };
-                f()
-        }
-        """
-        ima_lambda5 = """
-        {
-                x:=5;
-                f := \() -> x;
-                f()
-        }
-        """
-        ima_lambda6_fac = """
-        {
-                local fac := \(n) -> {
-                        if (n <= 1) then 1
-                        else n*fac(n-1)
-                } in
-                fac(2)
-        }
-        """
-        ast = parser.parse(lexer=lexer, input=ima_lambda2)
+        incc_code = open(incc_file, 'r')
+        ast = parser.parse(lexer=lexer, input=incc_code.read())
 
         if args.O1 or args.constantfolding:
                 # apply constant folding
@@ -200,51 +58,36 @@ def main(args):
                         ast = optimizations.constantPropagation(ast)
                         ast = optimizations.constantFolding(ast)
 
-        # TODO: keine Prozeduren, Lambdas sind das einzige an Funktionen
 
-        # quit/break for iterators
-        # e.g.
-        #       f() {
-        #               break;
-        #       }
-        #       for i in ...:
-        #               f()
-        # call f in loop breaks the loops
-        #
-
-
-        # TODO: after constant folding + propagating it makes sense to do dead code elimination so unused variables will get deleted
-        #       so the program result can be calculated at compile time and contains nothing more
+        # after constant folding + propagating it makes sense to do dead code elimination so unused variables will get deleted
+        # so the program result can be calculated at compile time and contains nothing more
         if args.O1 or args.deadcodeelimination:
                 # TODO: doesn't eliminate all
                 ast = optimizations.deadCodeElimination(ast)
 
 
-        file = "example1"
-        code_ir = ast.code_b(rho)  # always generate intermediate representation, but write only to file if specified by cma/mama flag
-        print(f"env: {rho}")
-        if args.cma:
-                # write cma code to file
-                with open(f"./{file}.cma","w") as cma_code:
-                        cma_code.write(code_ir)
-        if args.mama:
-                # write mama code to file
-                with open(f"./{file}.mama","w") as mama_code:
-                        mama_code.write(code_ir)
-        if args.ima:
-                # write ima code to file
-                with open(f"./{file}.ima","w") as ima_code:
-                        ima_code.write(code_ir)
+        file = args.output
+        code_ir = ast.code_b(env, 0)  # always generate intermediate representation, but write only to file if specified by cma/mama flag
+        print(f"main env: {env}")
+        match args.ir:
+                case 'cma':
+                        # write cma code to file
+                        with open(f"./{file}.cma","w") as cma_code:
+                                cma_code.write(code_ir)
+                case 'mama':
+                        # write mama code to file
+                        with open(f"./{file}.mama","w") as mama_code:
+                                mama_code.write(code_ir)
+                case 'ima':
+                        # write ima code to file
+                        with open(f"./{file}.ima","w") as ima_code:
+                                ima_code.write(code_ir)
 
-        # optimize on intermediate representation
-        if args.optimizeir:
-                pass
-        
         if args.asm or args.obj or args.exe:
                 # write asm code to file
-                code_x86  = to_x86_64(code_ir, rho)
+                code_x86  = to_x86_64(code_ir, env)
                 with open(f"./{file}.s","w") as program_code:
-                        program_code.write(x86_program(code_x86,rho))
+                        program_code.write(x86_program(code_x86, env))
 
         if args.obj or args.exe:
                 # generate object file
@@ -253,8 +96,6 @@ def main(args):
         if args.exe or all(arg is None for arg in vars(args).values()):
                 # generate executable
                 os.system(f"gcc -o {file} {file}.o -no-pie -ggdb -gdwarf")
-        #print(f"env: {global_env(env)}")
-        
 
 
 """
@@ -276,17 +117,37 @@ def addOptimizationFlags(argparser):
         argparser.add_argument('--deadcodeelimination', action='store_true', help='Apply optimization dead code elimination')
 
 
-
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(prog='compiler', description='Run the compiler')
-    # argparser.add_argument('file', type=str, nargs='?', help='The file to compile')
-    argparser.add_argument('--cma', action='store_true', help='Create C-Machine code')
-    argparser.add_argument('--mama', action='store_true', help='Create Maurer-Machine code')
-    argparser.add_argument('--ima', action='store_true', help='Create IMa code')
-    argparser.add_argument('--asm', action='store_true', help='Create assembly code')
-    argparser.add_argument('--obj', action='store_true', help='Create object file')
-    argparser.add_argument('--exe', action='store_true', help='Create executable')
-    addOptimizationFlags(argparser)
+        argparser = argparse.ArgumentParser(prog='compiler', description='Run the compiler')
 
-    args = argparser.parse_args()
-    main(args)
+        # decide between compiling a file or running testcases
+        subparsers = argparser.add_subparsers(required=True, dest='action', help='Choose what to do')
+
+        compile_args = subparsers.add_parser('c', help='Compile a file')
+        compile_args.add_argument('--ir', type=str, choices=['cma', 'mama', 'ima'], default='ima', help='Set intermediate representation')
+
+        compile_args.add_argument('--asm', action='store_true', help='Create assembly code')
+        compile_args.add_argument('--obj', action='store_true', help='Create object file')
+        compile_args.add_argument('--exe', action='store_true', help='Create executable')
+        compile_args.add_argument('-o', type=str, dest='output', default="example1", help='Set ouput file')
+        compile_args.add_argument('srcfile', type=str, help='The file to compile')
+        addOptimizationFlags(compile_args)
+
+        testcase_args = subparsers.add_parser('t', help='Run testcases')
+        testcase_args.add_argument('--ir', type=str, choices=['cma', 'mama', 'ima'], default='ima', help='Set intermediate representation')
+        testcase_args.add_argument('-o', type=str, dest='output', default="example2", help='Set ouput file')
+        # for running only specific testcases
+        testcase_args.add_argument('-e', nargs='+', help='Test only specific expression')
+        testcase_args.add_argument('-t', nargs='+', help='Test only specific testcases no.')
+        addOptimizationFlags(testcase_args)
+
+        args = argparser.parse_args()
+        print(f"args: {args}")
+
+        match args.action:
+                case 'c':
+                        # Compile a file
+                        main(args.srcfile, args)
+                case 't':
+                        # Run testcases
+                        runTests(args)

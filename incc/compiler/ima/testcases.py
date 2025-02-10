@@ -473,7 +473,37 @@ lambda_tests = {"expr": "LambdaExpression", "testcases": [
 			f(1)
 		}
 	""",
-	"expected": 3}
+	"expected": 3},
+
+	{"code": """
+		{
+			f := \() -> {
+				x
+			};
+			x := 4;
+			f()
+		}
+	""",
+	"expected": 4},
+
+	{"code": """
+		{
+			f := \() -> {
+				y
+			};
+			local y:=4 in f()
+		}
+	""",
+	"expected": Exception},
+
+	{"code": """
+		{
+			(\(x) -> {
+				x
+			})(1)
+		}
+	""",
+	"expected": 1}
 
 	]}
 

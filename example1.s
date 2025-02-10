@@ -15,7 +15,19 @@ main:
         mov     rbp,    rax             ; set frame pointer to current (empty) stack pointer
                 
         ;;; Start des eigentlichen Programms
-                                        ;;; === mkvec 3 ===
+program_start:         
+                                        ;;; === alloc 1 ===
+                                        ;;; malloc 2
+        push    rdx     
+        mov     rdi,    16      
+        call    malloc  
+        pop     rdx     
+                                        ;;; alloc_tuple
+        mov     rdx,    rax     
+        mov     qword [rdx],'D'     
+        mov     qword [rdx+8],0       
+        push    rdx     
+                                        ;;; === mkvec 1 ===
                                         ;;; malloc 2
         push    rdx     
         mov     rdi,    16      
@@ -24,26 +36,19 @@ main:
                                         ;;; alloc_tuple
         mov     rdx,    rax     
         mov     qword [rdx],'V'     
-                                        ;;; malloc 4
+                                        ;;; malloc 2
         push    rdx     
-        mov     rdi,    32      
+        mov     rdi,    16      
         call    malloc  
         pop     rdx     
         mov     qword [rdx+8],rax     
-        mov     qword [rax],3       
-        mov     qword [rax+24],0       
-        mov     qword [rax+24],0       
-        mov     qword [rax+24],0       
+        mov     qword [rax],1       
         mov     qword [rax+8],0       
-        mov     qword [rax+16],0       
-        mov     qword [rax+24],0       
+        pop     qword [rax+8]
         push    rdx     
-                                        ;;; === setgp ===
+                                        ;;; === setgv ===
         pop     r12     
-                                        ;;; === loadc 2 ===
-        mov     rcx,    qword 2 
-        push    rcx     
-                                        ;;; === mkbasic ===
+                                        ;;; === mkvec 0 ===
                                         ;;; malloc 2
         push    rdx     
         mov     rdi,    16      
@@ -51,43 +56,15 @@ main:
         pop     rdx     
                                         ;;; alloc_tuple
         mov     rdx,    rax     
-        mov     qword [rdx],'B'     
+        mov     qword [rdx],'V'     
                                         ;;; malloc 1
         push    rdx     
         mov     rdi,    8       
         call    malloc  
         pop     rdx     
         mov     qword [rdx+8],rax     
-        pop     qword [rax]
+        mov     qword [rax],0       
         push    rdx     
-                                        ;;; === pushglobalvec ===
-        push    r12     
-                                        ;;; === storeaddr 0 ===
-        pop     rax     
-        mov     qword rdx,[rax+8] 
-        pop     rcx     
-        mov     qword [rdx+8],rcx     
-        push    rcx     
-                                        ;;; === pop 1 ===
-        pop     rax     
-                                        ;;; === pushglobalvec ===
-        push    r12     
-                                        ;;; === pushaddr 0 ===
-        pop     rax     
-        mov     qword rdx,[rax+8] 
-        push    qword [rdx+8]
-                                        ;;; === pop 1 ===
-        pop     rax     
-                                        ;;; === pushglobalvec ===
-        push    r12     
-                                        ;;; === pushaddr 2 ===
-        pop     rax     
-        mov     qword rdx,[rax+8] 
-        push    qword [rdx+24]
-                                        ;;; === pop 1 ===
-        pop     rax     
-                                        ;;; === pushglobalvec ===
-        push    r12     
                                         ;;; === mkfunval lambda_0 ===
                                         ;;; malloc 2
         push    rdx     
@@ -111,23 +88,9 @@ main:
                                         ;;; === jump  end_lambda_0 ===
         jmp     end_lambda_0
 lambda_0:         
-                                        ;;; === pushglobalvec ===
-        push    r12     
-                                        ;;; === pushaddr 0 ===
-        pop     rax     
-        mov     qword rdx,[rax+8] 
-        push    qword [rdx+8]
-                                        ;;; === getbasic ===
-        pop     rax     
-        mov     rcx,    [rax+8] 
-        push    qword [rcx]
-                                        ;;; === loadc 1 ===
-        mov     rcx,    qword 1 
+                                        ;;; === loadc 4 ===
+        mov     rcx,    qword 4 
         push    rcx     
-        pop     rcx     
-        pop     rax     
-        add     rax,    rcx     
-        push    rax     
                                         ;;; === mkbasic ===
                                         ;;; malloc 2
         push    rdx     
@@ -145,34 +108,32 @@ lambda_0:
         mov     qword [rdx+8],rax     
         pop     qword [rax]
         push    rdx     
-                                        ;;; === pushglobalvec ===
-        push    r12     
-                                        ;;; === storeaddr 1 ===
-        pop     rax     
-        mov     qword rdx,[rax+8] 
-        pop     rcx     
-        mov     qword [rdx+16],rcx     
-        push    rcx     
                                         ;;; === popenv ===
         pop     rax     
         pop     rcx     
         pop     rbp     
+        pop     r14     
         pop     r12     
         push    rax     
         jmp     rcx     
 end_lambda_0:         
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === storeaddr 1 ===
+                                        ;;; === rewriteinvec 0 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
         pop     rcx     
-        mov     qword [rdx+16],rcx     
-        push    rcx     
+        mov     qword rax,[rdx + 8]
+        mov     qword rdx,[rcx]   
+        mov     qword [rax],rdx     
+        mov     qword rdx,[rcx+8] 
+        mov     qword [rax+8],rdx     
+        push    rax     
                                         ;;; === pop 1 ===
         pop     rax     
                                         ;;; === mark back_from_call_0 ===
         push    r12     
+        push    r14     
         push    rbp     
         push    back_from_call_0
         mov     rbp,    rsp     
@@ -197,10 +158,10 @@ end_lambda_0:
         pop     r14     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === pushaddr 1 ===
+                                        ;;; === pushaddr 0 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
-        push    qword [rdx+16]
+        push    qword [rdx+8]
                                         ;;; === apply ===
         pop     rdx     
         mov     qword rcx,[rdx+8] 
@@ -214,10 +175,12 @@ back_from_call_0:
         push    qword [rcx]
         ;;; Ende des eigentlichen Programms
                 
+program_end:         
         pop     rax     
         mov     rsi,    rax     
         mov     rdi,    i64_fmt         ; arguments in rdi, rsi
         mov     rax,    0               ; no xmm registers used
+printf_call:         
         push    rbp                     ; set up stack frame, must be aligned
         call    printf                  ; Call C function
         pop     rbp                     ; restore stack
