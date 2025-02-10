@@ -116,7 +116,7 @@ class AssignmentExpression(CompiledExpression):
         addr = var_entry['addr']
 
         ret = self.value.code_v(env,kp)
-        ret += rewrite(env, self.var.name, j=addr) # n=0 is optional
+        ret += rewrite(env, self.var.name, n=1, j=addr) # n=0 is optional
         return ret
 
 @dataclass
