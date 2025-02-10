@@ -275,7 +275,15 @@ localvar_tests = {"expr": "LocalExpression", "testcases": [
 			}
 		}
 	""",
-	"expected": 5}
+	"expected": 5},
+
+	{"code": """
+		{
+			x := 1;
+			local x:=2 in x:=4
+		}
+	""",
+	"expected": 4}
 
 	]}
 

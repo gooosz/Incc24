@@ -104,7 +104,6 @@ class VariableExpression(CompiledExpression):
         # lookup because variable could be defined in parent environment or is in global/param vector
         print(f"Zugriff auf var {self.name} at addr {lookup(env, self.name)['addr']}")
         return getvar(self.name, env, kp)
-        #return getvec(self.name, env) + f"pushaddr {lookup(env, self.name)['addr']}\n"
 
 
 @dataclass
@@ -114,20 +113,10 @@ class AssignmentExpression(CompiledExpression):
 
     def code_v(self, env, kp):
         var_entry = lookup(env, self.var.name)
-        # only set variable scope to global if it has not been set yet
-        # so in code    f := \(x) -> x:=2;
-        #               f(2)
-        #  x inside lambda is seen as param not as global
-
-        #if var_entry['scope'] is None:
-        #    var_entry['scope'] = 'global' # value of variable got set now
         addr = var_entry['addr']
 
-        ret = ""
-        ret += self.value.code_v(env,kp)
+        ret = self.value.code_v(env,kp)
         ret += rewrite(env, self.var.name, j=addr) # n=0 is optional
-        #ret += "pushglobalvec\n"
-        #ret += f"storeaddr {addr}\n"
         return ret
 
 @dataclass
@@ -285,6 +274,7 @@ class LocalExpression(CompiledExpression):
         for i, [var, val] in enumerate(self.localvars):
             ret += f"{val.code_v(env2, kp+n)}"
             ret += rewrite(env2, var, n, i) # gets the correct statements (must differ between local and global/param because the latter use vectors)
+            ret += "pop 1\n" # no need to keep object on stack, because the dummy value from before has been rewritten
         # evaluate body
         ret += "# local body\n"
         ret += f"{self.body.code_v(env2, kp+n)}"
@@ -415,13 +405,8 @@ def nextlabel(expr: CompiledExpression):#
             ret = (f"lambda_{count_lambda}", f"end_lambda_{count_lambda}")
             count_lambda += 1
     return ret
-# push address of variable onto stack
-# TODO: change this to pushlocalvec, pushglobalvec, pushparamvec + push j
-#def getvar(var, env):
-#    match lookup(env, var):
-#        case {'scope': 'local', 'addr': j, 'size': _}: return f"pushlocalvar {j}\n"     # j is index in local vector
-#        case {'scope': 'global', 'addr': j, 'size': _}: return f"pushglobalvar {j}\n"   # j is index in global vector
-#        case _: raise Exception(f"Variable {var} not defined in {env}")
+
+
 # push address of vector where variable is in or will be in
 def getvec(var, env):
     match lookup(env, var):

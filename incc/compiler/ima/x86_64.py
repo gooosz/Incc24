@@ -252,7 +252,7 @@ def to_x86_64(cma_code, env) :
                 # ptr to object values
                 code += "mov    qword rcx, [rax+8]\n" # indirection, because nasm can't do double dereference mov [rdx+8], [rax+8]
                 code += "mov    qword [rdx+8], rcx\n"
-                # no push here
+                code += "push   rdx\n" # push changed object onto stack again
             case ['rewriteinvec', j]:
                 # overwrites the values in i-th object in vector with new values
                 # stack looks like:
