@@ -115,6 +115,10 @@ def to_x86_64(cma_code, env) :
                 code += 'xor    rdx, rdx    ; dividend is in rdx:rax, so zero out rdx before division (or else floating point exception might occur)\n'
                 code += 'div    rcx\n'
                 code += 'push   rax\n'
+            case ['neg']:
+                code += 'pop    rax\n'
+                code += 'neg    rax\n'
+                code += 'push   rax\n'
             case ['le' | 'gr' | 'leq' | 'geq' | 'eq' | 'neq'] :
                 code += 'pop    rcx\n'
                 code += 'pop    rax\n'
@@ -220,6 +224,24 @@ def to_x86_64(cma_code, env) :
                 code += 'pop    rax\n'
                 code += 'mov    qword rdx, [rax+8]\n'
                 code += f'push   qword [rdx+{8+8*int(j)}]\n' # 8 offset in vec because first element is size of vec
+            case ['pushaddr']:
+                # on stack is address of vector, index j
+                # push address at index j in that vector onto stack
+                #   |       j           |
+                #   | address of vector |
+                # vector is:
+                # ['V', ptr] -> [n, 0, 1, ...]
+                code += f';;; === pushaddr ===\n'
+                code += 'pop    rcx\n' # index
+                code += 'pop    rax\n'
+                code += 'mov    qword rdx, [rax+8]\n'
+                code += 'push   rdx\n' # mul will overwrite rdx value, so save it to restore after
+                code += 'mov    rax, 8\n' # multiply index by 8 because 64bit values
+                code += 'mul    rcx\n'    # rax = 8 * index
+                code += 'add    rax, 8\n' # add 8 offset because first element is size of vec
+                code += 'pop    rdx\n' # restore previous rdx value
+                code += 'add    rdx, rax\n' # rdx holds memory address to access the vector at index
+                code += f'push   qword [rdx]\n'
             case ['storeaddr', j]:
                 # on stack is:
                 #   | address of vector       |
@@ -231,7 +253,6 @@ def to_x86_64(cma_code, env) :
                 code += 'mov    qword rdx, [rax+8]\n'
                 code += f'pop   qword [rdx+{8+8*int(j)}]\n' # put address of variable at index j in vector
                 code += f'push  qword [rdx+{8+8*int(j)}]\n' # put address of variable back onto stack
-                #code += 'push   rcx\n' # put address of variable on stack
             case ['alloc', n]:
                 # creates n dummy tuple values and stores them on stack
                 code += f';;; === alloc {n} ===\n'
@@ -302,11 +323,12 @@ def to_x86_64(cma_code, env) :
                 code += 'push   rax\n' # put return value onto stack again
                 code += 'jmp    rcx\n'  # return to Rücksprungadresse
             case ['mark', A]:
-                # save rbp, global, local, param vectors
+                # save rbp, global, param vectors
                 # Stack frame:
                 #   |   return value      |
                 #   | Rücksprungadresse/A | <- new rbp
                 #   |      old rbp        |
+                #   |  old param vector   |
                 #   | old global vector   |
                 code += f';;; === mark {A} ===\n'
                 code += 'push   r12\n'

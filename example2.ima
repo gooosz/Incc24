@@ -1,21 +1,109 @@
 # setting up global variables
-alloc 1
-mkvec 1
+alloc 6
+mkvec 6
 setgv
 # body of program
-mark back_from_call_29
-loadc 1
-mkbasic
-mkvec 1
-setpv
-mkvec 0
-mkfunval lambda_23
-jump end_lambda_23
-lambda_23:
+pushglobalvec
+pushaddr 1
+pushglobalvec
+pushaddr 0
+mkvec 2
+mkfunval lambda_3
+jump end_lambda_3
+lambda_3:
+# ArrayAccessExpression(var='matrix', index=VariableExpression(name='row'))
 pushparamvec
 pushaddr 0
+pushparamvec
+pushaddr 1
+getbasic
+pushaddr
+pushparamvec
+rewriteinvec 1
+pop 1
+loadc 0
+mkbasic
+pushglobalvec
+rewriteinvec 1
+pop 1
+loadc 0
+mkbasic
+pushglobalvec
+rewriteinvec 0
+pop 1
+loadc 0
+mkbasic
+while_1:
+pushglobalvec
+pushaddr 0
+getbasic
+pushparamvec
+pushaddr 1
+getbasic
+le
+jumpz endwhile_1
+do_1:
+pop 1
+pushglobalvec
+pushaddr 1
+getbasic
+# ArrayAccessExpression(var='row', index=VariableExpression(name='i'))
+pushparamvec
+pushaddr 1
+pushglobalvec
+pushaddr 0
+getbasic
+pushaddr
+getbasic
+add
+mkbasic
+pushglobalvec
+rewriteinvec 1
+pop 1
+pushglobalvec
+pushaddr 0
+getbasic
+loadc 1
+add
+mkbasic
+pushglobalvec
+rewriteinvec 0
+jump while_1
+endwhile_1:
+pop 1
+pushglobalvec
+pushaddr 1
 popenv
-end_lambda_23:
+end_lambda_3:
+pushglobalvec
+rewriteinvec 3
+pop 1
+# ArrayExpression(values=[ArrayExpression(values=[SelfEvaluatingExpression(id=1), SelfEvaluatingExpression(id=2)]), ArrayExpression(values=[SelfEvaluatingExpression(id=4), SelfEvaluatingExpression(id=5)])])
+# ArrayExpression(values=[SelfEvaluatingExpression(id=4), SelfEvaluatingExpression(id=5)])
+loadc 5
+mkbasic
+loadc 4
+mkbasic
+mkvec 2
+# ArrayExpression(values=[SelfEvaluatingExpression(id=1), SelfEvaluatingExpression(id=2)])
+loadc 2
+mkbasic
+loadc 1
+mkbasic
+mkvec 2
+mkvec 2
+pushglobalvec
+rewriteinvec 2
+pop 1
+mark back_from_call_4
+loadc 1
+mkbasic
+pushglobalvec
+pushaddr 2
+mkvec 2
+setpv
+pushglobalvec
+pushaddr 3
 apply
-back_from_call_29:
+back_from_call_4:
 getbasic

@@ -511,9 +511,107 @@ lambda_tests = {"expr": "LambdaExpression", "testcases": [
 			})(1)
 		}
 	""",
-	"expected": 1}
+	"expected": 1},
+
+	{"code": """
+		{
+			f := \(x, y, z) -> {
+				if (x==1) then y+z
+				else x+y
+			};
+			f(1,2,3) + f(0,7,4)
+		}
+	""",
+	"expected": 12}
 
 	]}
+
+array_tests = {"expr": "ArrayExpression", "testcases": [
+	{"code": """
+		{
+			x:=[1,4]
+		}
+	""",
+	"expected": 2},
+
+	{"code": """
+		{
+			x:=array()
+		}
+	""",
+	"expected": 0},
+
+	{"code": """
+		{
+			x:=[1];
+			x[0]
+		}
+	""",
+	"expected": 1},
+
+	{"code": """
+		{
+			first_element := \(arr) -> {
+				# check if arr empty
+				if (arr == 0) then -1
+				else arr[0]
+			};
+			x := [11,22,33,44,55,66,77,88,99];
+			first_element(x)
+		}
+	""",
+	"expected": 11},
+
+	{"code": """
+		{
+			first_element := \(arr) -> {
+				# check if arr empty
+				if (arr == 0) then -1
+				else arr[0]
+			};
+			x := [11,22,33,44,55,66,77,88,99];
+			first_element(x) * first_element(y:=[])
+		}
+	""",
+	"expected": -11},
+
+	{"code": """
+		{
+			row_sum := \(arr) -> {
+				sum := 0;
+				i := 0;
+				while (i < arr) do {
+					sum := sum + arr[i];
+					i := i+1
+				};
+				sum
+			};
+			x := [11, 99];
+			row_sum(x)
+		}
+	""",
+	"expected": 110},
+
+	{"code": """
+		{
+			# returns sum of row in matrix
+			row_sum := \(matrix, row) -> {
+				row := matrix[row];
+				sum := 0;
+				i := 0;
+				while (i < row) do {
+					sum := sum + row[i];
+					i := i+1
+				};
+				sum
+			};
+			x := [[1,2], [4,5]];
+			row_sum(x, 0)
+		}
+	""",
+	"expected": 3}
+	]}
+
 
 
 
@@ -524,5 +622,6 @@ all_tests = [binaryexpr_tests,
 	     while_tests,
 	     loop_tests,
 	     localvar_tests,
-	     lambda_tests]
+	     lambda_tests,
+	     array_tests]
 

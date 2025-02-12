@@ -14,6 +14,11 @@ operators = {'+': ('add', lambda x,y: x+y),
              '!=': ('neq', lambda x,y: x!=y)
              }
 
+# can call an operator using the string by unary_operators['-'][1](a) which will do -a
+unary_operators = {
+            '-': ('neg', lambda x: -x)
+    }
+
 class CompiledExpression:
     def code_b(self, env, kp):
         return self.code_v(env, kp) + "getbasic\n"
@@ -72,6 +77,16 @@ class BinaryOperatorExpression(CompiledExpression):
         #return f"# {self}\n" + ret
         return ret
 
+@dataclass
+class UnaryOperatorExpression(CompiledExpression):
+    op: str
+    expr: CompiledExpression
+
+    def code_b(self, env, kp):
+        print(f"code_b kp={kp}: {self}")
+        ret = self.expr.code_b(env, kp)
+        ret += f"{unary_operators[self.op][0]}\n"
+        return ret
 
 # 1. BinaryOperator hat code_b, code_v
 # 2. Sequence, Variables, Assignment nur code_v
@@ -118,6 +133,39 @@ class AssignmentExpression(CompiledExpression):
         ret = self.value.code_v(env,kp)
         ret += rewrite(env, self.var.name, n=1, j=addr) # n=0 is optional
         return ret
+
+
+@dataclass
+class ArrayExpression(CompiledExpression):
+    # syntax: [ expressionlist ] or array(expressionlist)
+    values: list[CompiledExpression]
+
+    # code_b of array is the size, because it will simply go to object ['V', ptr] -> [n, ...]
+    # and return the size n
+
+    def code_v(self, env, kp):
+        # returns address to array object
+        # evaluate every expression and push value on stack in reverse
+        # (so mkvec can add values in correct order easier)
+        n = len(self.values)
+        ret = ""
+        for i in reversed(range(n)):
+            ret += f"{self.values[i].code_v(env, kp+i)}"
+        ret += f"mkvec {n}\n"
+        return f"# {self}\n" + ret
+
+@dataclass
+class ArrayAccessExpression(CompiledExpression):
+    # syntax: var[expr]
+    var: str
+    index: CompiledExpression
+
+    def code_v(self, env, kp):
+        ret = getvar(self.var, env, kp)
+        ret += self.index.code_b(env, kp+1)
+        # address of array/vector is on top of stack => simply pushaddr now
+        ret += f"pushaddr\n"
+        return f"# {self}\n" + ret
 
 @dataclass
 class ITEExpression(CompiledExpression):
@@ -181,7 +229,7 @@ class WhileExpression(CompiledExpression):
         while_label, do_label, end_label = nextlabel(self)
         # if condition fails at first check, must return default value 0
         # new iteration discards the old value
-        ret  = "loadc 0\n"
+        ret  = "loadc 0\nmkbasic\n"
         ret += f"{while_label}:\n"
         ret += self.condition.code_b(env, kp+1)
         ret += f"jumpz {end_label}\n"
@@ -215,7 +263,7 @@ class LoopExpression(CompiledExpression):
         ret += self.body.code_b(env, kp+1)    # push new iteration value
         ret += "swap\n" # swap, so that loopvar is on top of stack
         ret += "dec\n"  # decrement top value (loopvar) of stack
-        ret += f"jump {do_label}\n"   # check loopvar if next iteration
+        ret += f"jump {loop_label}\n"   # check loopvar if next iteration
         ret += f"{end_label}:\n"
         ret += "pop 1\n"  # final pop because loopvar is on top of stack
         return ret
@@ -224,8 +272,7 @@ class LoopExpression(CompiledExpression):
         print(f"code_v kp={kp}: {self}")
         loop_label, do_label, end_label = nextlabel(self)
 
-        ret = "loadc 0\n" # default value in case loop body doesnt get executed
-        ret += "mkbasic\n"
+        ret = "loadc 0\nmkbasic\n" # default value in case loop body doesnt get executed
         ret += self.loopvar.code_b(env, kp+1)
         ret += f"{loop_label}:\n"
         ret += "dup\n"    # duplicate the loopvar because the jumpz later on will delete one
@@ -318,10 +365,13 @@ class LambdaExpression(CompiledExpression):
 
     """
         Stack frame on entry:
-        |   return value    |
         | Rücksprungadresse |
         |     old rbp       |
+        | old param vector  |
         | old global vector |
+
+        Stack frame on exit:
+        |   return value    |
 
         Registers:
         r12: global vector
@@ -339,23 +389,9 @@ class LambdaExpression(CompiledExpression):
         print(f"> free_vars {freevars} in {self}")
         n = len(freevars)
         ret = ""
-        """
-            TODO: KeyError when a new global variable is defined inside lambda, that has not been named outside lambda before
-                        f := \() -> {
-                            x:=5
-                        };
-                        f()
-                because x is considered a free variable inside lambda, but scope is None because not defined outside
-        """
 
-        """
-            in LambdaExpression a rewrite must happen when global variables get new assigned
-            something like:
-
-        """
-        # put all free vars in new gp for lambda in reverse, so order in vector is preserved
-        # fill new global vector with values of all free variables and create new environment
-        # add those to new environment
+        # put all free vars in new gp for lambda in reverse, so easier to add to vector in asm (simply mkvec)
+        # add free vars, params of lambda to new environment
         for i,v in reversed(list(enumerate(freevars))):
             ret += getvar(v, env, kp)
         ret += f"mkvec {n}\n" # fills a new vector with n values on stack
@@ -364,14 +400,13 @@ class LambdaExpression(CompiledExpression):
         ret += f"{lambda_label}:\n"
         env2 = {}
         for i,v in enumerate(freevars):
-            env2[v] = {'addr': i, 'scope': 'global', 'size': 8} # all free vars (global/former local variables) become global now
+            env2[v] = {'addr': i, 'scope': 'global', 'size': 8} # all free vars (former global/local/param variables) become global now
         for i,v in enumerate(self.params):
-            env2[v] = {'addr': i, 'scope': 'param', 'size': 8} # add params to new environment
+            env2[v] = {'addr': i, 'scope': 'param', 'size': 8} # add current params to new environment
         print(f"lambda env: {env2}")
         ret += f"{self.body.code_v(env2, 0)}"
         ret += "popenv\n"
         ret += f"{end_lambda}:\n"
-        #return f"# {self}\n# env: {env2}\n" + ret
         return ret
 
 
@@ -473,6 +508,9 @@ def free_vars(expr):
         case LocalExpression(localvars, body):      return free_vars(body) - {x for x,e in localvars}  # localvars are bound variables
         case LambdaExpression(params, body):        return free_vars(body) - {x for x in params}     # params are bound variables
         case CallExpression(name, params):          return free_vars(name).union(*(free_vars(p) for p in params))
+        case ArrayExpression(values):               return {x for el in values for x in free_vars(el)}
+        case ArrayAccessExpression(var, index):     return {var} | free_vars(index)
+        case UnaryOperatorExpression(op, expr):     return free_vars(expr)
         case _:                                     raise Exception(f"free_vars({expr}) wrong")
 
 
@@ -513,9 +551,17 @@ def max_num_params(expr):
         case LambdaExpression(params, body):        return max(len(params), max_num_params(body))
         case CallExpression(name, params):          return max(max_num_params(name), len(params))
         case ProgramExpression(body):               return max_num_params(body)
+        case ArrayExpression(values):               return max([max_num_params(el) for el in values]) if values else 0
+        case ArrayAccessExpression(var, index):     return max_num_params(index)
+        case UnaryOperatorExpression(op, expr):     return max_num_params(expr)
         case _:                                     raise Exception(f"max_num_params({expr}) wrong")
 
 
+# formats ir code to be more readable
+# e.g. puts all lambdas on top of file
+# creates main label where execution starts (TODO: must work with that in x86 assembly, like Tims formatting)
+def format_ir(ir_code: str, lambdas: list[str]):
+    pass
 
 
 
