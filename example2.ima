@@ -4,9 +4,9 @@ mkvec 6
 setgv
 # body of program
 pushglobalvec
-pushaddr 1
+pushaddr 3
 pushglobalvec
-pushaddr 0
+pushaddr 1
 mkvec 2
 mkfunval lambda_3
 jump end_lambda_3
@@ -24,18 +24,18 @@ pop 1
 loadc 0
 mkbasic
 pushglobalvec
-rewriteinvec 1
+rewriteinvec 0
 pop 1
 loadc 0
 mkbasic
 pushglobalvec
-rewriteinvec 0
+rewriteinvec 1
 pop 1
 loadc 0
 mkbasic
 while_1:
 pushglobalvec
-pushaddr 0
+pushaddr 1
 getbasic
 pushparamvec
 pushaddr 1
@@ -45,38 +45,38 @@ jumpz endwhile_1
 do_1:
 pop 1
 pushglobalvec
-pushaddr 1
+pushaddr 0
 getbasic
 # ArrayAccessExpression(var='row', index=VariableExpression(name='i'))
 pushparamvec
 pushaddr 1
 pushglobalvec
-pushaddr 0
+pushaddr 1
 getbasic
 pushaddr
 getbasic
 add
 mkbasic
 pushglobalvec
-rewriteinvec 1
+rewriteinvec 0
 pop 1
 pushglobalvec
-pushaddr 0
+pushaddr 1
 getbasic
 loadc 1
 add
 mkbasic
 pushglobalvec
-rewriteinvec 0
+rewriteinvec 1
 jump while_1
 endwhile_1:
 pop 1
 pushglobalvec
-pushaddr 1
+pushaddr 0
 popenv
 end_lambda_3:
 pushglobalvec
-rewriteinvec 3
+rewriteinvec 2
 pop 1
 # ArrayExpression(values=[ArrayExpression(values=[SelfEvaluatingExpression(id=1), SelfEvaluatingExpression(id=2)]), ArrayExpression(values=[SelfEvaluatingExpression(id=4), SelfEvaluatingExpression(id=5)])])
 # ArrayExpression(values=[SelfEvaluatingExpression(id=4), SelfEvaluatingExpression(id=5)])
@@ -93,17 +93,17 @@ mkbasic
 mkvec 2
 mkvec 2
 pushglobalvec
-rewriteinvec 2
+rewriteinvec 0
 pop 1
 mark back_from_call_4
-loadc 1
+loadc 0
 mkbasic
 pushglobalvec
-pushaddr 2
+pushaddr 0
 mkvec 2
 setpv
 pushglobalvec
-pushaddr 3
+pushaddr 2
 apply
 back_from_call_4:
 getbasic

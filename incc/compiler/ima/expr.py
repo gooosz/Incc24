@@ -130,6 +130,7 @@ class AssignmentExpression(CompiledExpression):
         var_entry = lookup(env, self.var.name)
         addr = var_entry['addr']
 
+        # TODO: change this to run code_v of var, so assigning values in array arr[0] := 0 works
         ret = self.value.code_v(env,kp)
         ret += rewrite(env, self.var.name, n=1, j=addr) # n=0 is optional
         return ret
@@ -461,6 +462,17 @@ def getvar(var, env, kp):
 
 # on stack is pointer to new object
 # function rewrites the object at pos i in stack with the new values on top of stack
+"""
+    TODO: so assignment of array indexes and future stuff works:
+          rewrite should work like that:
+          on stack is | new variable |
+                      | old variable |
+          and then the content of old variable is replaced by new variable content
+          so the ima commands of AssignmentExpression should look like:
+                getvar(old_var) bzw. code_v(old_var)
+                code_v(new_var)
+                rewrite
+"""
 def rewrite(env, var, n=1, j=0):
     match lookup(env, var):
         case {'scope': 'local', 'addr': _, 'size': _}:  return f"rewriteloc {n-j}\n"

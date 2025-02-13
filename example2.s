@@ -110,16 +110,16 @@ program_start:
         pop     r12     
                                         ;;; === pushglobalvec ===
         push    r12     
+                                        ;;; === pushaddr 3 ===
+        pop     rax     
+        mov     qword rdx,[rax+8] 
+        push    qword [rdx+32]
+                                        ;;; === pushglobalvec ===
+        push    r12     
                                         ;;; === pushaddr 1 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
         push    qword [rdx+16]
-                                        ;;; === pushglobalvec ===
-        push    r12     
-                                        ;;; === pushaddr 0 ===
-        pop     rax     
-        mov     qword rdx,[rax+8] 
-        push    qword [rdx+8]
                                         ;;; === mkvec 2 ===
                                         ;;; malloc 2
         push    rdx     
@@ -227,40 +227,6 @@ lambda_3:
         push    rdx     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === rewriteinvec 1 ===
-        pop     rax     
-        mov     qword rdx,[rax+8] 
-        pop     rcx     
-        mov     qword rax,[rdx + 16]
-        mov     qword rdx,[rcx]   
-        mov     qword [rax],rdx     
-        mov     qword rdx,[rcx+8] 
-        mov     qword [rax+8],rdx     
-        push    rax     
-                                        ;;; === pop 1 ===
-        pop     rax     
-                                        ;;; === loadc 0 ===
-        mov     rcx,    qword 0 
-        push    rcx     
-                                        ;;; === mkbasic ===
-                                        ;;; malloc 2
-        push    rdx     
-        mov     rdi,    16      
-        call    malloc  
-        pop     rdx     
-                                        ;;; alloc_tuple
-        mov     rdx,    rax     
-        mov     qword [rdx],'B'     
-                                        ;;; malloc 1
-        push    rdx     
-        mov     rdi,    8       
-        call    malloc  
-        pop     rdx     
-        mov     qword [rdx+8],rax     
-        pop     qword [rax]
-        push    rdx     
-                                        ;;; === pushglobalvec ===
-        push    r12     
                                         ;;; === rewriteinvec 0 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
@@ -293,13 +259,47 @@ lambda_3:
         mov     qword [rdx+8],rax     
         pop     qword [rax]
         push    rdx     
+                                        ;;; === pushglobalvec ===
+        push    r12     
+                                        ;;; === rewriteinvec 1 ===
+        pop     rax     
+        mov     qword rdx,[rax+8] 
+        pop     rcx     
+        mov     qword rax,[rdx + 16]
+        mov     qword rdx,[rcx]   
+        mov     qword [rax],rdx     
+        mov     qword rdx,[rcx+8] 
+        mov     qword [rax+8],rdx     
+        push    rax     
+                                        ;;; === pop 1 ===
+        pop     rax     
+                                        ;;; === loadc 0 ===
+        mov     rcx,    qword 0 
+        push    rcx     
+                                        ;;; === mkbasic ===
+                                        ;;; malloc 2
+        push    rdx     
+        mov     rdi,    16      
+        call    malloc  
+        pop     rdx     
+                                        ;;; alloc_tuple
+        mov     rdx,    rax     
+        mov     qword [rdx],'B'     
+                                        ;;; malloc 1
+        push    rdx     
+        mov     rdi,    8       
+        call    malloc  
+        pop     rdx     
+        mov     qword [rdx+8],rax     
+        pop     qword [rax]
+        push    rdx     
 while_1:         
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === pushaddr 0 ===
+                                        ;;; === pushaddr 1 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
-        push    qword [rdx+8]
+        push    qword [rdx+16]
                                         ;;; === getbasic ===
         pop     rax     
         mov     rcx,    [rax+8] 
@@ -329,10 +329,10 @@ do_1:
         pop     rax     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === pushaddr 1 ===
+                                        ;;; === pushaddr 0 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
-        push    qword [rdx+16]
+        push    qword [rdx+8]
                                         ;;; === getbasic ===
         pop     rax     
         mov     rcx,    [rax+8] 
@@ -345,10 +345,10 @@ do_1:
         push    qword [rdx+16]
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === pushaddr 0 ===
+                                        ;;; === pushaddr 1 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
-        push    qword [rdx+8]
+        push    qword [rdx+16]
                                         ;;; === getbasic ===
         pop     rax     
         mov     rcx,    [rax+8] 
@@ -391,11 +391,11 @@ do_1:
         push    rdx     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === rewriteinvec 1 ===
+                                        ;;; === rewriteinvec 0 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
         pop     rcx     
-        mov     qword rax,[rdx + 16]
+        mov     qword rax,[rdx + 8]
         mov     qword rdx,[rcx]   
         mov     qword [rax],rdx     
         mov     qword rdx,[rcx+8] 
@@ -405,10 +405,10 @@ do_1:
         pop     rax     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === pushaddr 0 ===
+                                        ;;; === pushaddr 1 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
-        push    qword [rdx+8]
+        push    qword [rdx+16]
                                         ;;; === getbasic ===
         pop     rax     
         mov     rcx,    [rax+8] 
@@ -439,11 +439,11 @@ do_1:
         push    rdx     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === rewriteinvec 0 ===
+                                        ;;; === rewriteinvec 1 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
         pop     rcx     
-        mov     qword rax,[rdx + 8]
+        mov     qword rax,[rdx + 16]
         mov     qword rdx,[rcx]   
         mov     qword [rax],rdx     
         mov     qword rdx,[rcx+8] 
@@ -456,10 +456,10 @@ endwhile_1:
         pop     rax     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === pushaddr 1 ===
+                                        ;;; === pushaddr 0 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
-        push    qword [rdx+16]
+        push    qword [rdx+8]
                                         ;;; === popenv ===
         pop     rax     
         pop     rcx     
@@ -471,11 +471,11 @@ endwhile_1:
 end_lambda_3:         
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === rewriteinvec 3 ===
+                                        ;;; === rewriteinvec 2 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
         pop     rcx     
-        mov     qword rax,[rdx + 32]
+        mov     qword rax,[rdx + 24]
         mov     qword rdx,[rcx]   
         mov     qword [rax],rdx     
         mov     qword rdx,[rcx+8] 
@@ -628,11 +628,11 @@ end_lambda_3:
         push    rdx     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === rewriteinvec 2 ===
+                                        ;;; === rewriteinvec 0 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
         pop     rcx     
-        mov     qword rax,[rdx + 24]
+        mov     qword rax,[rdx + 8]
         mov     qword rdx,[rcx]   
         mov     qword [rax],rdx     
         mov     qword rdx,[rcx+8] 
@@ -646,8 +646,8 @@ end_lambda_3:
         push    rbp     
         push    back_from_call_4
         mov     rbp,    rsp     
-                                        ;;; === loadc 1 ===
-        mov     rcx,    qword 1 
+                                        ;;; === loadc 0 ===
+        mov     rcx,    qword 0 
         push    rcx     
                                         ;;; === mkbasic ===
                                         ;;; malloc 2
@@ -668,10 +668,10 @@ end_lambda_3:
         push    rdx     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === pushaddr 2 ===
+                                        ;;; === pushaddr 0 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
-        push    qword [rdx+24]
+        push    qword [rdx+8]
                                         ;;; === mkvec 2 ===
                                         ;;; malloc 2
         push    rdx     
@@ -697,10 +697,10 @@ end_lambda_3:
         pop     r14     
                                         ;;; === pushglobalvec ===
         push    r12     
-                                        ;;; === pushaddr 3 ===
+                                        ;;; === pushaddr 2 ===
         pop     rax     
         mov     qword rdx,[rax+8] 
-        push    qword [rdx+32]
+        push    qword [rdx+24]
                                         ;;; === apply ===
         pop     rdx     
         mov     qword rcx,[rdx+8] 

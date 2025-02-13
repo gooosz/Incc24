@@ -609,7 +609,17 @@ array_tests = {"expr": "ArrayExpression", "testcases": [
 			row_sum(x, 0)
 		}
 	""",
-	"expected": 3}
+	"expected": 3},
+
+	{"code": """
+		{
+			x := 1;
+			arr := [x];
+			arr[0] := 2;
+			x
+		}
+	""",
+	"expected": 1}
 	]}
 
 
