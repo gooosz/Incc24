@@ -56,6 +56,14 @@ globalvar_tests = {"expr": "VariableExpression", "testcases": [
 		}
 	""",
 	"expected": 5},
+
+	{"code": """
+		{
+			{3;4;x} := 5;
+			x
+		}
+	""",
+	"expected": 5}
 	]}
 
 
@@ -283,7 +291,18 @@ localvar_tests = {"expr": "LocalExpression", "testcases": [
 			local x:=2 in x:=4
 		}
 	""",
-	"expected": 4}
+	"expected": 4},
+
+	{"code": """
+		{
+			x := 1;
+			local x:=2 in {
+				x := 5;
+				x
+			}
+		}
+	""",
+	"expected": 5}
 
 	]}
 
@@ -522,7 +541,78 @@ lambda_tests = {"expr": "LambdaExpression", "testcases": [
 			f(1,2,3) + f(0,7,4)
 		}
 	""",
-	"expected": 12}
+	"expected": 12},
+
+	{"code": """
+		{
+			plus_eins := \(x) -> x+1;
+			plus_zwei := \(y) -> y+2;
+			plus_drei := \(z) -> z+3;
+
+			# sum = sum + (0+1) = 1
+			# sum = sum + (1+2) = 4
+			# sum = sum + (2+3) = 9
+
+			i:=0;
+				sum := 0;
+				while (i < 3) do {
+					sum := sum + if (i==0) then plus_eins(0)
+						     else if (i==1) then plus_zwei(1)
+						     else plus_drei(2);
+					i := i+1
+				};
+				sum
+		}
+	""",
+	"expected": 9},
+
+	{"code": """
+		{
+			plus_eins := \(x) -> x+1;
+			plus_zwei := \(y) -> y+2;
+			plus_drei := \(z) -> z+3;
+
+			# sum = sum + (0+1) = 1
+			# sum = sum + (1+2) = 4
+			# sum = sum + (2+3) = 9
+
+			local i:=0 in {
+				sum := 0;
+				while (i < 3) do {
+					sum := sum + if (i==0) then 1
+						     else if (i==1) then 3
+						     else 5;
+					i := i+1
+				};
+				sum
+			}
+		}
+	""",
+	"expected": 9},
+
+	{"code": """
+		{
+			plus_eins := \(x) -> x+1;
+			plus_zwei := \(y) -> y+2;
+			plus_drei := \(z) -> z+3;
+
+			# sum = sum + (0+1) = 1
+			# sum = sum + (1+2) = 4
+			# sum = sum + (2+3) = 9
+
+			local i:=0 in {
+				sum := 0;
+				while (i < 3) do {
+					sum := sum + if (i==0) then plus_eins(i)
+						     else if (i==1) then plus_zwei(i)
+						     else plus_drei(i);
+					i := i+1
+				};
+				sum
+			}
+		}
+	""",
+	"expected": 9}
 
 	]}
 
@@ -615,13 +705,137 @@ array_tests = {"expr": "ArrayExpression", "testcases": [
 		{
 			x := 1;
 			arr := [x];
+			y := arr[0];
+			y := 2;
+			arr[0]
+		}
+	""",
+	"expected": 1},
+
+	{"code": """
+		{
+			x := 1;
+			y := x;
+			arr := [y];
 			arr[0] := 2;
+			x + y
+		}
+	""",
+	"expected": 2},
+
+	{"code": """
+		{
+			x := 1;
+			arr := [x];
+			x := 2;
+			arr[0]
+		}
+	""",
+	"expected": 1},
+
+	{"code": """
+		{
+			local arr := [2] in arr[0]
+		}
+	""",
+	"expected": 2},
+
+	{"code": """
+		{
+			arr := [1,2,3];
+			size(arr)
+		}
+	""",
+	"expected": 3},
+
+	{"code": """
+		{
+			x := 1;
+			local arr:=[x] in arr[0]:=2;
 			x
 		}
 	""",
-	"expected": 1}
+	"expected": 1},
+
+	# Basic values are passed by copy to array
+	# everything else is passed as reference
+
+	{"code": """
+		{
+			arr := [1,2,3];
+			brr := arr;
+			brr[1] := 4;
+			arr[1]
+		}
+	""",
+	"expected": 4},
+
+	{"code": """
+		{
+			plus_eins := \(x) -> x+1;
+			plus_zwei := \(y) -> y+2;
+			plus_drei := \(z) -> z+3;
+			arr := [plus_eins, plus_zwei, plus_drei];
+			arr[0](1)
+		}
+	""",
+	"expected": 2},
+
+	{"code": """
+		{
+			plus_eins := \(x) -> x+1;
+			plus_zwei := \(y) -> y+2;
+			plus_drei := \(z) -> z+3;
+			arr := [plus_eins, plus_zwei, plus_drei];
+
+			# sum = sum + (0+1) = 1
+			# sum = sum + (1+2) = 4
+			# sum = sum + (2+3) = 9
+
+			i:=0;
+			sum := 0;
+			while (i < arr) do {
+				sum := sum + arr[i](i);
+				i := i+1
+			};
+			sum
+		}
+	""",
+	"expected": 9},
+
+	{"code": """
+		{
+			plus_eins := \(x) -> x+1;
+			plus_zwei := \(y) -> y+2;
+			plus_drei := \(z) -> z+3;
+			arr := [plus_eins, plus_zwei, plus_drei];
+
+			# sum = sum + (0+1) = 1
+			# sum = sum + (1+2) = 4
+			# sum = sum + (2+3) = 9
+
+			local i:=0 in {
+				sum := 0;
+				while (i < arr) do {
+					sum := sum + arr[i](i);
+					i := i+1
+				};
+				sum
+			}
+		}
+	""",
+	"expected": 9}
+
 	]}
 
+string_tests = {"expr": "StringExpression", "testcases": [
+	{"code": """
+		{
+			x := "HelloWorld!"
+		}
+	""",
+	"expected": "Hello"}
+	]}
 
 
 
@@ -633,5 +847,6 @@ all_tests = [binaryexpr_tests,
 	     loop_tests,
 	     localvar_tests,
 	     lambda_tests,
-	     array_tests]
+	     array_tests,
+	     string_tests]
 

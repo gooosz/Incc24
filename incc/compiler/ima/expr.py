@@ -28,7 +28,7 @@ class CompiledExpression:
         #raise Exception(f"code_v von {self} uninplemented")
 
 @dataclass
-class ProgramExpression:
+class ProgramExpression(CompiledExpression):
     body: CompiledExpression
 
     def code_b(self, env, kp):
@@ -127,12 +127,15 @@ class AssignmentExpression(CompiledExpression):
     value: CompiledExpression
 
     def code_v(self, env, kp):
-        var_entry = lookup(env, self.var.name)
-        addr = var_entry['addr']
+        #var_entry = lookup(env, self.var.name)
+        #addr = var_entry['addr']
 
         # TODO: change this to run code_v of var, so assigning values in array arr[0] := 0 works
-        ret = self.value.code_v(env,kp)
-        ret += rewrite(env, self.var.name, n=1, j=addr) # n=0 is optional
+        ret = f"# {self}\n"
+        ret += self.var.code_v(env, kp)
+        ret += self.value.code_v(env, kp+1)
+        ret += "rewrite\n"
+        #ret += rewrite(env, self.var.name, n=1, j=addr) # n=0 is optional
         return ret
 
 
@@ -150,8 +153,18 @@ class ArrayExpression(CompiledExpression):
         # (so mkvec can add values in correct order easier)
         n = len(self.values)
         ret = ""
+        ret += f"alloc {n}\n" # alloc n dummy values, this won't fix reference when deep values are passed to array (arrays/functions)
         for i in reversed(range(n)):
+            # create the vector values first (alloc n) and rewrite each value with the code_v of element
+            """
+                | new value |  <- rsp
+                |  dummy[0] |
+                |  dummy[1] |
+                |  dummy[2] |
+            """
             ret += f"{self.values[i].code_v(env, kp+i)}"
+            ret += f"rewriteloc {i+1}\n" # dummy value to be overwritten, i is in reverse, +1 because code_v pushed a value onto stack
+            ret += "pop 1\n"
         ret += f"mkvec {n}\n"
         return f"# {self}\n" + ret
 
@@ -167,6 +180,24 @@ class ArrayAccessExpression(CompiledExpression):
         # address of array/vector is on top of stack => simply pushaddr now
         ret += f"pushaddr\n"
         return f"# {self}\n" + ret
+
+@dataclass
+class StringExpression(CompiledExpression):
+    id: str
+
+    def code_v(self, env, kp):
+        # TODO: what is code_b of a string?
+        #
+        # code_b of string is pointer to null-terminated string values in heap
+        # so code_v of string is:
+        #       ['S', ptr] -> ['H','e','l','l','o','\0']
+        # and code_b is ptr to:
+        #       ['H','e','l','l','o','\0']
+        # this way a getbasic at end of program will print the string correctly if format string has specifier %s !!
+        # and TODO: make the format string always print %s, so integer will be casted to a string
+        return f'loadstr {self.id}\n'
+
+
 
 @dataclass
 class ITEExpression(CompiledExpression):
@@ -220,7 +251,7 @@ class WhileExpression(CompiledExpression):
         ret += f"jumpz {end_label}\n"
         ret += f"{do_label}:\n"
         ret += "pop 1\n" # discard value from last iteration
-        ret += self.body.code_b(env, kp+1)
+        ret += self.body.code_b(env, kp)
         ret += f"jump {while_label}\n"
         ret += f"{end_label}:\n"
         return ret
@@ -236,7 +267,7 @@ class WhileExpression(CompiledExpression):
         ret += f"jumpz {end_label}\n"
         ret += f"{do_label}:\n"
         ret += "pop 1\n" # discard value from last iteration
-        ret += self.body.code_v(env, kp+1)
+        ret += self.body.code_v(env, kp)
         ret += f"jump {while_label}\n"
         ret += f"{end_label}:\n"
         return ret
@@ -523,26 +554,8 @@ def free_vars(expr):
         case ArrayExpression(values):               return {x for el in values for x in free_vars(el)}
         case ArrayAccessExpression(var, index):     return {var} | free_vars(index)
         case UnaryOperatorExpression(op, expr):     return free_vars(expr)
+        case StringExpression(x):                   return set()
         case _:                                     raise Exception(f"free_vars({expr}) wrong")
-
-
-# returns set of local variables of whole program
-def local_vars(expr):
-    match expr:
-        case SelfEvaluatingExpression(x):           return set()
-        case VariableExpression(x):                 return set()
-        case BinaryOperatorExpression(e1, op, e2):  return local_vars(e1).union(local_vars(e2))
-        case SequenceExpression(seq):               return {x for el in seq for x in local_vars(el)}
-        case AssignmentExpression(var, val):        return local_vars(var).union(local_vars(val))
-        case ITEExpression(condition, ifbody, None): return local_vars(condition).union(local_vars(ifbody))
-        case ITEExpression(condition, ifbody, elsebody): return local_vars(condition).union(local_vars(ifbody)).union(local_vars(elsebody))
-        case WhileExpression(condition, body):      return local_vars(condition).union(local_vars(body))
-        case LoopExpression(loopvar, body):         return local_vars(loopvar).union(local_vars(body))
-        case LocalExpression(localvars, body):      return {x for x,e in localvars}.union(local_vars(body)) # nested, names of all locally defined variables
-        case LambdaExpression(params, body):        return local_vars(body) # params go into param vector
-        case CallExpression(name, params):          return local_vars(name).union(*(local_vars(x) for x in params))
-        case ProgramExpression(body):               return local_vars(body)
-        case _:                                     raise Exception(f"local_vars({expr}) wrong")
 
 # returns biggest number of params of a lambda
 # varargs should be possible in the future, so biggest number of params is decided between lambda params and given params in call
@@ -566,15 +579,8 @@ def max_num_params(expr):
         case ArrayExpression(values):               return max([max_num_params(el) for el in values]) if values else 0
         case ArrayAccessExpression(var, index):     return max_num_params(index)
         case UnaryOperatorExpression(op, expr):     return max_num_params(expr)
+        case StringExpression(x):                   return 0
         case _:                                     raise Exception(f"max_num_params({expr}) wrong")
-
-
-# formats ir code to be more readable
-# e.g. puts all lambdas on top of file
-# creates main label where execution starts (TODO: must work with that in x86 assembly, like Tims formatting)
-def format_ir(ir_code: str, lambdas: list[str]):
-    pass
-
 
 
 

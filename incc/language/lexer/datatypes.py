@@ -1,6 +1,7 @@
 reserved_set = {
     'LIST',
-    'ARRAY'
+    'ARRAY',
+    'SIZE'
 }
 
 token_set = {

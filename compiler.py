@@ -27,13 +27,14 @@ import copy
 # testcases
 from tests import *
 
-def main(incc_file, args):
+def main(args):
         env = {}
         lexer = lex()
         parser = yacc(start='program')
 
-        incc_code = open(incc_file, 'r')
-        ast = parser.parse(lexer=lexer, input=incc_code.read())
+        with open(args.srcfile, 'r') as incc_file:
+                incc_code = incc_file.read()
+                ast = parser.parse(lexer=lexer, input=incc_code)
 
         if args.O1 or args.constantfolding:
                 # apply constant folding
@@ -89,13 +90,13 @@ def main(incc_file, args):
                 with open(f"./{file}.s","w") as program_code:
                         program_code.write(x86_program(code_x86, env))
 
-        if args.obj or args.exe:
-                # generate object file
-                os.system(f"nasm -f elf64 {file}.s -g -F dwarf")
+        #if args.obj or args.exe:
+        # generate object file
+        os.system(f"nasm -f elf64 {file}.s -g -F dwarf")
 
-        if args.exe or all(arg is None for arg in vars(args).values()):
-                # generate executable
-                os.system(f"gcc -o {file} {file}.o -no-pie -ggdb -gdwarf")
+        #if args.exe or all(arg is None for arg in vars(args).values()):
+        # generate executable
+        os.system(f"gcc -o {file} {file}.o -no-pie -ggdb -gdwarf")
 
 
 """
@@ -147,7 +148,7 @@ if __name__ == '__main__':
         match args.action:
                 case 'c':
                         # Compile a file
-                        main(args.srcfile, args)
+                        main(args)
                 case 't':
                         # Run testcases
                         runTests(args)

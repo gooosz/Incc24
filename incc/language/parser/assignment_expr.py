@@ -15,6 +15,10 @@ def p_expression_id(p):
     'expression : IDENTIFIER'
     p[0] = gen().VariableExpression(p[1])
 
+#def p_expression_assign(p):
+#    'expression : IDENTIFIER ASSIGN expression'
+#    p[0] = gen().AssignmentExpression(gen().VariableExpression(p[1]), p[3])
+
 def p_expression_assign(p):
-    'expression : IDENTIFIER ASSIGN expression'
-    p[0] = gen().AssignmentExpression(gen().VariableExpression(p[1]), p[3])
+    'expression : expression ASSIGN expression'
+    p[0] = gen().AssignmentExpression(p[1], p[3])

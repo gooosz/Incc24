@@ -1,0 +1,134 @@
+# setting up global variables
+alloc 5
+mkvec 5
+setgv
+# body of program
+# AssignmentExpression(var=VariableExpression(name='plus_eins'), value=LambdaExpression(params=['x'], body=BinaryOperatorExpression(e1=VariableExpression(name='x'), op='+', e2=SelfEvaluatingExpression(id=1))))
+pushglobalvec
+pushaddr 1
+mkvec 0
+mkfunval lambda_0
+jump end_lambda_0
+lambda_0:
+pushparamvec
+pushaddr 0
+getbasic
+loadc 1
+add
+mkbasic
+popenv
+end_lambda_0:
+rewrite
+pop 1
+# AssignmentExpression(var=VariableExpression(name='plus_zwei'), value=LambdaExpression(params=['y'], body=BinaryOperatorExpression(e1=VariableExpression(name='y'), op='+', e2=SelfEvaluatingExpression(id=2))))
+pushglobalvec
+pushaddr 3
+mkvec 0
+mkfunval lambda_1
+jump end_lambda_1
+lambda_1:
+pushparamvec
+pushaddr 0
+getbasic
+loadc 2
+add
+mkbasic
+popenv
+end_lambda_1:
+rewrite
+pop 1
+# AssignmentExpression(var=VariableExpression(name='plus_drei'), value=LambdaExpression(params=['z'], body=BinaryOperatorExpression(e1=VariableExpression(name='z'), op='+', e2=SelfEvaluatingExpression(id=3))))
+pushglobalvec
+pushaddr 0
+mkvec 0
+mkfunval lambda_2
+jump end_lambda_2
+lambda_2:
+pushparamvec
+pushaddr 0
+getbasic
+loadc 3
+add
+mkbasic
+popenv
+end_lambda_2:
+rewrite
+pop 1
+# Start of LocalExpression(localvars=[('i', SelfEvaluatingExpression(id=0))], body=SequenceExpression(seq=[AssignmentExpression(var=VariableExpression(name='sum'), value=SelfEvaluatingExpression(id=0)), WhileExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='<', e2=SelfEvaluatingExpression(id=3)), body=SequenceExpression(seq=[AssignmentExpression(var=VariableExpression(name='sum'), value=BinaryOperatorExpression(e1=VariableExpression(name='sum'), op='+', e2=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='==', e2=SelfEvaluatingExpression(id=0)), ifbody=SelfEvaluatingExpression(id=1), elsebody=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='==', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=3), elsebody=SelfEvaluatingExpression(id=5))))), AssignmentExpression(var=VariableExpression(name='i'), value=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='+', e2=SelfEvaluatingExpression(id=1)))]))]))
+alloc 1
+loadc 0
+mkbasic
+rewriteloc 1
+pop 1
+# local body
+# AssignmentExpression(var=VariableExpression(name='sum'), value=SelfEvaluatingExpression(id=0))
+pushglobalvec
+pushaddr 2
+loadc 0
+mkbasic
+rewrite
+pop 1
+loadc 0
+mkbasic
+while_0:
+# getvar(i, {'parent': {'plus_drei': {'addr': 0, 'scope': 'global', 'size': 8}, 'plus_eins': {'addr': 1, 'scope': 'global', 'size': 8}, 'sum': {'addr': 2, 'scope': 'global', 'size': 8}, 'plus_zwei': {'addr': 3, 'scope': 'global', 'size': 8}}, 'i': {'addr': 1, 'scope': 'local', 'size': 8}}, 2), addr=1
+pushlocal 1
+getbasic
+loadc 3
+le
+jumpz endwhile_0
+do_0:
+pop 1
+# AssignmentExpression(var=VariableExpression(name='sum'), value=BinaryOperatorExpression(e1=VariableExpression(name='sum'), op='+', e2=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='==', e2=SelfEvaluatingExpression(id=0)), ifbody=SelfEvaluatingExpression(id=1), elsebody=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='==', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=3), elsebody=SelfEvaluatingExpression(id=5)))))
+pushglobalvec
+pushaddr 2
+pushglobalvec
+pushaddr 2
+getbasic
+ite_0:
+# getvar(i, {'parent': {'plus_drei': {'addr': 0, 'scope': 'global', 'size': 8}, 'plus_eins': {'addr': 1, 'scope': 'global', 'size': 8}, 'sum': {'addr': 2, 'scope': 'global', 'size': 8}, 'plus_zwei': {'addr': 3, 'scope': 'global', 'size': 8}}, 'i': {'addr': 1, 'scope': 'local', 'size': 8}}, 3), addr=1
+pushlocal 2
+getbasic
+loadc 0
+eq
+jumpz else_0
+then_0:
+loadc 1
+jump endite_0
+else_0:
+ite_1:
+# getvar(i, {'parent': {'plus_drei': {'addr': 0, 'scope': 'global', 'size': 8}, 'plus_eins': {'addr': 1, 'scope': 'global', 'size': 8}, 'sum': {'addr': 2, 'scope': 'global', 'size': 8}, 'plus_zwei': {'addr': 3, 'scope': 'global', 'size': 8}}, 'i': {'addr': 1, 'scope': 'local', 'size': 8}}, 3), addr=1
+pushlocal 2
+getbasic
+loadc 1
+eq
+jumpz else_1
+then_1:
+loadc 3
+jump endite_1
+else_1:
+loadc 5
+endite_1:
+endite_0:
+add
+mkbasic
+rewrite
+pop 1
+# AssignmentExpression(var=VariableExpression(name='i'), value=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='+', e2=SelfEvaluatingExpression(id=1)))
+# getvar(i, {'parent': {'plus_drei': {'addr': 0, 'scope': 'global', 'size': 8}, 'plus_eins': {'addr': 1, 'scope': 'global', 'size': 8}, 'sum': {'addr': 2, 'scope': 'global', 'size': 8}, 'plus_zwei': {'addr': 3, 'scope': 'global', 'size': 8}}, 'i': {'addr': 1, 'scope': 'local', 'size': 8}}, 1), addr=1
+pushlocal 0
+# getvar(i, {'parent': {'plus_drei': {'addr': 0, 'scope': 'global', 'size': 8}, 'plus_eins': {'addr': 1, 'scope': 'global', 'size': 8}, 'sum': {'addr': 2, 'scope': 'global', 'size': 8}, 'plus_zwei': {'addr': 3, 'scope': 'global', 'size': 8}}, 'i': {'addr': 1, 'scope': 'local', 'size': 8}}, 2), addr=1
+pushlocal 1
+getbasic
+loadc 1
+add
+mkbasic
+rewrite
+jump while_0
+endwhile_0:
+slide 1
+# End of LocalExpression(localvars=[('i', SelfEvaluatingExpression(id=0))], body=SequenceExpression(seq=[AssignmentExpression(var=VariableExpression(name='sum'), value=SelfEvaluatingExpression(id=0)), WhileExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='<', e2=SelfEvaluatingExpression(id=3)), body=SequenceExpression(seq=[AssignmentExpression(var=VariableExpression(name='sum'), value=BinaryOperatorExpression(e1=VariableExpression(name='sum'), op='+', e2=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='==', e2=SelfEvaluatingExpression(id=0)), ifbody=SelfEvaluatingExpression(id=1), elsebody=ITEExpression(condition=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='==', e2=SelfEvaluatingExpression(id=1)), ifbody=SelfEvaluatingExpression(id=3), elsebody=SelfEvaluatingExpression(id=5))))), AssignmentExpression(var=VariableExpression(name='i'), value=BinaryOperatorExpression(e1=VariableExpression(name='i'), op='+', e2=SelfEvaluatingExpression(id=1)))]))]))
+pop 1
+pushglobalvec
+pushaddr 2
+getbasic

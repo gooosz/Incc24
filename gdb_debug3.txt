@@ -1,0 +1,20 @@
+
+
+locals:
+
+i: 0x405520 ['B', 0x405560] -> [0]
+
+
+
+globals:
+
+sum:  0x4055c0 ['B', 0x4055e0] -> [0]
+
+
+stack in while:
+
+
+0		<- sum(0)
+0x4055c0	<- sum
+0x405520	<- i
+old rbp

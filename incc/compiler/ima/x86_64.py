@@ -88,12 +88,17 @@ def to_x86_64(cma_code, env) :
             case ['pop', n] :
                 code += f';;; === pop {n} ===\n'
                 code += '\n'.join('pop  rax' for i in range(int(n))) + '\n'
-            case ['loadc', q] :
+            case ['loadc', q]:
                 # push qword cannot whatsoever push 64bit values (large numbers) onto stack
                 # however mov can put 64bit values into registers, use that as a workaround
                 code += f';;; === loadc {q} ===\n'
                 code += f'mov   rcx, qword {str(q)}\n'
                 code += 'push   rcx\n'
+            case ['loadstr', *q]:
+                # string, but q is a list because whitespaces got split by regex
+                s = ' '.join(str(x) for x in q) # create a correct whitespace str, so undo the regex haha
+                code += f';;; === loadc {s} ===\n'
+                print(s)
             case ['add'] :
                 code += 'pop    rcx\n'
                 code += 'pop    rax\n'
@@ -291,6 +296,21 @@ def to_x86_64(cma_code, env) :
                 code += "mov    qword rdx, [rcx+8]\n" # indirection, because nasm can't do double dereference mov [rax], [rcx]
                 code += "mov    qword [rax+8], rdx\n"
                 code += "push   rax\n" # push address of changed object back to stack
+            case ['rewrite']:
+                # overwrites the values old object in with new values
+                # stack looks like:
+                #   | new value |
+                #   | old value |
+                code += f';;; === rewrite ===\n'
+                code += 'pop    rax\n' # new values
+                code += 'pop    rdx\n' # old values [type, ptr]
+                # type of object
+                code += "mov    qword rcx, [rax]\n" # indirection, because nasm can't do double dereference mov [rdx], [rax]
+                code += "mov    qword [rdx], rcx\n"
+                # ptr to object values
+                code += "mov    qword rcx, [rax+8]\n" # indirection, because nasm can't do double dereference mov [rdx+8], [rax+8]
+                code += "mov    qword [rdx+8], rcx\n"
+                code += "push   rdx\n" # push address of changed object back to stack
             case ['slide', j]:
                 # remove j values under the top value of stack
                 code += f';;; === slide {j} ===\n'
@@ -354,6 +374,40 @@ def to_x86_64(cma_code, env) :
                     code += f'Error: unknown IMa statement {unknown}\n'
     return format_code(code)
 
+# fills needed registers for printf with different values
+# based on what object to print (basic, function, vector)
+# object to print is in rax
+def printf_object_fill_regs():
+    code = ""
+    # check type of object
+    code += "mov    qword rdx, [rax]\n"
+    code += "cmp    rdx, 'B'\n"
+    code += "je     print_basic\n"
+    code += "cmp    rdx, 'F'\n"
+    code += "je     print_function\n"
+    code += "cmp    rdx, 'V'\n"
+    code += "je     print_vector\n"
+    # ========================================
+    # if not a type of anything asked, it will default to printing as if object would be basic type
+    code += "print_basic:\n"
+    #code += "mov    qword rdx, [rax+8]        ; rdx holds value of basic type\n"
+    code += "mov    rsi, [rax+8]\n"
+    code += "mov    rdi, basic_type_fmt ; arguments in rdi, rsi\n"
+    code += "mov    rax,0               ; no xmm registers used\n"
+    code += "jmp    finished_filling_regs\n"
+    # ========================================
+    code += "print_function:\n"
+
+    code += "jmp    print_function\n"
+    # ========================================
+    code += "print_vector:\n"
+    code += "mov    qword rcx, [rax+8]\n      ; rcx holds size of vector"
+    code += "jmp    print_vector\n"
+    # ========================================
+    code += "finished_filling_regs:\n"
+    return code
+
+
 
 def x86_program(x86_code, env) :
     program  = x86_prefix(env)
@@ -370,7 +424,7 @@ def x86_prefix(env):
     program  = "extern  printf\n"
     program += "extern  malloc\n"
     program += "SECTION .data               ; Data section, initialized variables\n"
-    program += 'i64_fmt:  db  "%lld", 10, 0 ; printf format for printing an int64\n'
+    program += 'basic_type_fmt:  db  "%lld", 10, 0 ; printf format for printing an int64\n'
     program += 'malloc_errormsg:  db "Error: malloc failed, 10, 0"\n'
     program += '''; macros
 
@@ -385,28 +439,22 @@ def x86_start(env):
     program += "  mov   rax,rsp             ; rsp zeigt auf den geretteten rbp  \n"          
     program += "  sub   rax,qword 8         ; neuer rbp sollte ein wort darüber liegen\n"      
     program += "  mov   rbp,rax             ; set frame pointer to current (empty) stack pointer\n"          
-    # reserve space at start of stack for global variables
-    global_env_size = total_size(global_env(env)) # total size of all global variables
-    # first create vector for global vars
-    #program += alloc_tuple('V', num_of_globalvars(env))
-    #program += "  mov   r12, rdx      ; address of global variables vector is in r12 permanently\n"
-    #print(f"global: {global_env(env)}")
-    #print(f"global size: {total_size(global_env(env))}")
-
     return program
 
 def x86_final(env):
-    program  = "  pop   rax\n"
-    program += "  mov   rsi, rax\n"
-    program += "  mov   rdi,i64_fmt         ; arguments in rdi, rsi\n"
-    program += "  mov   rax,0               ; no xmm registers used\n"
+    program  = "  pop   rax\n" # rax holds value to print
+    # TODO: in main run program.code_v so return value is a pointer
+    #       this way we can check here if the object to print is 'B', 'F', 'V'
+    #       and print the return value of program in different ways
+    program += "  mov    rsi, rax\n"
+    program += "  mov    rdi, basic_type_fmt ; arguments in rdi, rsi\n"
+    program += "  mov    rax,0               ; no xmm registers used\n"
+    #program += printf_object_fill_regs()
     program += "printf_call: \n"
     program += "  push  rbp                 ; set up stack frame, must be aligned\n"
     program += "  call  printf              ; Call C function\n"
     program += "  pop   rbp                 ; restore stack\n"
     program += "\n;;; Rueckkehr zum aufrufenden Kontext\n"
-    #global_env_size = total_size(global_env(env))   # total size of all global variables
-    #program +=f"  add rsp, {global_env_size}        ; delete/invalidate the stack-space for global variables\n"
     program += "  pop   rbp                 ; original rbp is last thing on the stack\n"
     program += "  mov   rax,0               ; return 0\n"
     program += "  ret\n"
