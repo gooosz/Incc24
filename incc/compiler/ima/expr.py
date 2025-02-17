@@ -131,12 +131,10 @@ class AssignmentExpression(CompiledExpression):
         #var_entry = lookup(env, self.var.name)
         #addr = var_entry['addr']
 
-        # TODO: change this to run code_v of var, so assigning values in array arr[0] := 0 works
         ret = f"# {self}\n"
         ret += self.var.code_v(env, kp)
         ret += self.value.code_v(env, kp+1)
         ret += "rewrite\n"
-        #ret += rewrite(env, self.var.name, n=1, j=addr) # n=0 is optional
         return ret
 
 
@@ -420,13 +418,9 @@ class CallExpression(CompiledExpression):
         n = len(self.params)
         ret = ""
         ret += f"mark {call_return_label}\n" # saves old param vector as well to recover later on
-        # TODO: save old param vector values on stack to recover later on
         # run code_v of each param, fill param vector
         for i in reversed(range(n)):
-            ret += f"{self.params[i].code_v(env, kp+4+i)}" # params get stored in param vector, not on stack
-            #ret += "pushparamvec\n"
-            #ret += f"storeaddr {i}\n" # must be storeaddr instead of rewrite, so changing parameter value changes the value globally
-            #ret += "pop 1\n" # only store value into param vector so return value of storeaddr is not needed
+            ret += f"{self.params[i].code_v(env, kp+4+i)}"
         # create a new param vector, so old params are saved across nested lambdas
         ret += f"mkvec {n}\n"
         ret += "setpv\n"
@@ -521,14 +515,6 @@ def nextlabel(expr: CompiledExpression):#
     return ret
 
 
-# push address of vector where variable is in or will be in
-def getvec(var, env):
-    match lookup(env, var):
-        case {'scope': 'local', 'addr': j, 'size': _}:  return f"pushlocalvec\n"
-        case {'scope': 'global', 'addr': j, 'size': _}: return f"pushglobalvec\n"
-        case {'scope': 'param', 'addr': j, 'size': _}:  return f"pushparamvec\n"
-        case _: raise Exception(f"Variable {var} not defined in {env}") # scope None means variable is out of scope / hasn't been initialized yet => cannot use it
-
 # push address of variable onto stack
 # checks if var is global/local/param
 def getvar(var, env, kp):
@@ -541,15 +527,9 @@ def getvar(var, env, kp):
 # on stack is pointer to new object
 # function rewrites the object at pos i in stack with the new values on top of stack
 """
-    TODO: so assignment of array indexes and future stuff works:
-          rewrite should work like that:
           on stack is | new variable |
                       | old variable |
           and then the content of old variable is replaced by new variable content
-          so the ima commands of AssignmentExpression should look like:
-                getvar(old_var) bzw. code_v(old_var)
-                code_v(new_var)
-                rewrite
 """
 def rewrite(env, var, n=1, j=0):
     match lookup(env, var):

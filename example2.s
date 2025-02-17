@@ -68,8 +68,18 @@ main:
                 
         ;;; Start des eigentlichen Programms
 program_start:         
-                                        ;;; === alloc 0 ===
-                                        ;;; === mkvec 0 ===
+                                        ;;; === alloc 1 ===
+                                        ;;; malloc 2
+        push    rdx     
+        mov     rdi,    16      
+        call    malloc  
+        pop     rdx     
+                                        ;;; alloc_tuple
+        mov     rdx,    rax     
+        mov     qword [rdx],'D'     
+        mov     qword [rdx+8],0       
+        push    rdx     
+                                        ;;; === mkvec 1 ===
                                         ;;; malloc 2
         push    rdx     
         mov     rdi,    16      
@@ -78,35 +88,25 @@ program_start:
                                         ;;; alloc_tuple
         mov     rdx,    rax     
         mov     qword [rdx],'V'     
-                                        ;;; malloc 1
+                                        ;;; malloc 2
         push    rdx     
-        mov     rdi,    8       
+        mov     rdi,    16      
         call    malloc  
         pop     rdx     
         mov     qword [rdx+8],rax     
-        mov     qword [rax],0       
+        mov     qword [rax],1       
+        mov     qword [rax+8],0       
+        pop     qword [rax+8]
         push    rdx     
                                         ;;; === setgv ===
         pop     r12     
-                                        ;;; === loadc 6 ===
-        mov     rcx,    qword 6 
-        push    rcx     
-                                        ;;; === loadc 5 ===
-        mov     rcx,    qword 5 
-        push    rcx     
-                                        ;;; === loadc 4 ===
-        mov     rcx,    qword 4 
-        push    rcx     
-                                        ;;; === loadc 3 ===
-        mov     rcx,    qword 3 
-        push    rcx     
-                                        ;;; === loadc 2 ===
-        mov     rcx,    qword 2 
-        push    rcx     
-                                        ;;; === loadc 1 ===
-        mov     rcx,    qword 1 
-        push    rcx     
-                                        ;;; === mkstr %d %d %d %d %d %d ===
+                                        ;;; === pushglobalvec ===
+        push    r12     
+                                        ;;; === pushaddr 0 ===
+        pop     rax     
+        mov     qword rdx,[rax+8] 
+        push    qword [rdx+8]
+                                        ;;; === mkstr HelloWorld! ===
                                         ;;; malloc 2
         push    rdx     
         mov     rdi,    16      
@@ -116,59 +116,30 @@ program_start:
         mov     rdx,    rax     
         mov     qword [rdx],'S'     
         push    rdx     
-        mov     rdi,    18      
+        mov     rdi,    12      
         call    malloc  
         pop     rdx     
         mov     qword [rdx+8],rax     
-        mov     word [rax+0],'%d'    
-        mov     byte [rax+2],' '     
-        mov     word [rax+3],'%d'    
-        mov     byte [rax+5],' '     
-        mov     word [rax+6],'%d'    
-        mov     byte [rax+8],' '     
-        mov     word [rax+9],'%d'    
-        mov     byte [rax+11],' '     
-        mov     word [rax+12],'%d'    
-        mov     byte [rax+14],' '     
-        mov     word [rax+15],'%d'    
-        mov     byte [rax+17],0       
+        mov     byte [rax+0],'H'     
+        mov     byte [rax+1],'e'     
+        mov     byte [rax+2],'l'     
+        mov     byte [rax+3],'l'     
+        mov     byte [rax+4],'o'     
+        mov     byte [rax+5],'W'     
+        mov     byte [rax+6],'o'     
+        mov     byte [rax+7],'r'     
+        mov     byte [rax+8],'l'     
+        mov     byte [rax+9],'d'     
+        mov     byte [rax+10],'!'     
+        mov     byte [rax+11],0       
         push    rdx     
-                                        ;;; === getstr ===
+                                        ;;; === rewrite ===
         pop     rax     
-        push    qword [rax+8]
-                                        ;;; === loadc 7 ===
-        mov     rcx,    qword 7 
-        push    rcx     
-                                        ;;; === filllibcparams ===
-        call    fill_libc_params
-        add     rsp,    8       
-        add     rsp,    48      
-                                        ;;; === call printf ===
-        mov     rax,    0               ; no xmm registers used
-        push    rbp                     ; set up stack frame, must be aligned
-        call    printf                  ; Call LibC function
-        pop     rbp                     ; restore stack
-        push    rax     
-                                        ;;; === slide 1 ===
-        pop     rax     
-        add     rsp,    8       
-        push    rax     
-                                        ;;; === mkbasic ===
-                                        ;;; malloc 2
-        push    rdx     
-        mov     rdi,    16      
-        call    malloc  
         pop     rdx     
-                                        ;;; alloc_tuple
-        mov     rdx,    rax     
-        mov     qword [rdx],'B'     
-                                        ;;; malloc 1
-        push    rdx     
-        mov     rdi,    8       
-        call    malloc  
-        pop     rdx     
-        mov     qword [rdx+8],rax     
-        pop     qword [rax]
+        mov     qword rcx,[rax]   
+        mov     qword [rdx],rcx     
+        mov     qword rcx,[rax+8] 
+        mov     qword [rdx+8],rcx     
         push    rdx     
                                         ;;; === getbasic ===
         pop     rdi     

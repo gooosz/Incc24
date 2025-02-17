@@ -31,11 +31,14 @@ def constantFolding(ast: CompiledExpression):
 		case SequenceExpression(seq):
 			# try to do constant folding on all elements of sequence
 			#return SequenceExpression([constantFolding(expr) if type(expr) not in notAConstant else expr for expr in seq])
+			folded_seq = []
 			for i, expr in enumerate(seq):
 				# expr itself must not be a constant, but only can be folded into one or else Expression object disappears
 				if type(expr) not in notAConstant + aConstant:
-					seq[i] = constantFolding(expr) # update all entries to the folded expression
-			return ast
+					folded_seq.append(constantFolding(expr)) # update all entries to the folded expression
+				else:
+					folded_seq.append(expr)
+			return SequenceExpression(folded_seq)
 		case AssignmentExpression(var, val):
 			if type(val) not in notAConstant + aConstant:
 				ast = AssignmentExpression(var, constantFolding(val))
@@ -100,12 +103,13 @@ def constPropReplaceIn(ast: CompiledExpression, const: AssignmentExpression):
 		case SelfEvaluatingExpression(num):
 			return ast # stays the same
 		case SequenceExpression(seq):
+			propagated_seq = []
 			for i, expr in enumerate(seq):
 				try:
-					seq[i] = constPropReplaceIn(expr, const)
+					propagated_seq.append(constPropReplaceIn(expr, const))
 				except VariableOverwritten:
 					break	# variable got overwritten so stop propagating this variable
-			return ast
+			return SequenceExpression(propagated_seq)
 		case AssignmentExpression(var, val):
 			# check if const got overwritten
 			if var.name == const.var.name:

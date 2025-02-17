@@ -63,7 +63,15 @@ globalvar_tests = {"expr": "VariableExpression", "testcases": [
 			x
 		}
 	""",
-	"expected": 5}
+	"expected": 5},
+
+	{"code": """
+		{
+			{x; 4} := 5;
+			x
+		}
+	""",
+	"expected": Exception}
 	]}
 
 
@@ -838,6 +846,7 @@ array_tests = {"expr": "ArrayExpression", "testcases": [
 
 	]}
 
+# get_basic of string is pointer to C-string, so checking return value here doesn't really make sense
 string_tests = {"expr": "StringExpression", "testcases": [
 	{"code": """
 		x := "HelloWorld!"
@@ -896,9 +905,9 @@ printf_tests = {"expr": "printf", "testcases": [
 	"expected": 4},
 
 	{"code": r"""
-		printf("Test\\n")
+		printf("Test\n")
 	""",
-	"expected": 6},
+	"expected": 5},
 
 	{"code": """
 		{

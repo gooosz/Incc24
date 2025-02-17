@@ -262,7 +262,6 @@ def to_x86_64(cma_code, env) :
                 #   | address of vector       |
                 #   | address to new variable |
                 # store address of variable at index j in that vector and put address of variable onto stack again
-                # should storeaddr put the address back on stack? => Yes because simple assignment returns the value back
                 code += f';;; === storeaddr {j} ===\n'
                 code += 'pop    rax\n' # rax holds address to vector
                 code += 'mov    qword rdx, [rax+8]\n'
@@ -394,12 +393,13 @@ def to_x86_64(cma_code, env) :
                         # simply add the char
                         # character needs to be escaped if \n e.g.
                     # skip if value was escaped
-                    if i>0 and (s[i-1] == '\\' or s[i-1] == '%'):
+                    special_chars = ['\\', '%']
+                    if i>0 and (s[i-1] in special_chars) and (s[i] not in special_chars):
                         print(f"s[{i}]={s[i]} got escaped")
                         #count_escaped += 1
                         continue
                     c = s[i]
-                    if (s[i] == '\\' or s[i] == '%') and i+1<len(s):
+                    if (s[i] in special_chars) and i+1<len(s) and (s[i+1] not in special_chars):
                         c = s[i:i+2] # escaped value, e.g. \n, is 2 bytes big
                         code += f"mov    word [rax+{i}], '{c}'" + '\n'
                     else:
@@ -430,7 +430,6 @@ def to_x86_64(cma_code, env) :
                     code += f'add   rsp, {8*int(n)}\n'
                 else:
                     code += f'add   rsp, {8*6}\n'
-                # TODO: code += f'add    rsp, {8+ 8*(int(n) if int(n)<=6 else 6)}\n' # discard n + params on stack that are moved to the registers for call
             case ['call', func]:
                 code += f';;; === call {func} ===\n'
                 code += "mov    rax,0               ; no xmm registers used\n"
@@ -459,7 +458,6 @@ def getbasic_function():
     code += 'push   rbp\n' # save old rbp
     code += 'mov    rbp, rsp\n' # setup new stack frame
 
-    #code += 'pop    rcx\n' # Rücksprungadresse
     code += 'mov    rax, rdi\n' # address of object
     # check type of object
     code += "mov    qword rdx, [rax]\n"
@@ -493,7 +491,6 @@ def fill_libc_params_function():
     #   | param 1 |
     #   |   ...   |
     #   | param n |
-
     """
             Params:
                 1. rdi
@@ -505,9 +502,8 @@ def fill_libc_params_function():
                 all others get pushed on stack in reverse order:
                 |  7. |
                 | ... |
-        """
+    """
     code = 'fill_libc_params:\n'
-    #code += 'mov    qword rcx, [rsp+8]\n'
     code += 'push   rbp\n' # save old rbp
     code += 'mov    rbp, rsp\n' # setup new stack frame
     # Stack now looks like:
@@ -587,9 +583,6 @@ def x86_start(env):
 
 def x86_final(env):
     program  = "  pop   rax\n" # rax holds value to print
-    # TODO: in main run program.code_v so return value is a pointer
-    #       this way we can check here if the object to print is 'B', 'F', 'V'
-    #       and print the return value of program in different ways
     program += "  mov    rsi, rax\n"
     program += "  mov    rdi, basic_type_fmt ; arguments in rdi, rsi\n"
     program += "  mov    rax,0               ; no xmm registers used\n"
