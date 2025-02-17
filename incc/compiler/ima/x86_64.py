@@ -409,12 +409,6 @@ def to_x86_64(cma_code, env) :
                 #code += f"mov    qword [rax+{n}], '\\0'\n" # add '\0' to string
                 code += fr"mov    byte [rax+{n}], 0" + '\n' # add '\0' to string
                 code += 'push   rdx\n'
-            case ['getstr']:
-                # returns pointer to first cell of string object values
-                # on stack is address of object
-                code += f';;; === getstr ===\n'
-                code += 'pop    rax\n'
-                code += 'push   qword [rax+8]\n'
             case ['filllibcparams', n]:
                 # fills registers with values from stack according to libc standard
                 # stack looks like

@@ -184,22 +184,15 @@ class ArrayAccessExpression(CompiledExpression):
 class StringExpression(CompiledExpression):
     id: str
 
-    def code_b(self, env, kp):
-        # code_b of string:
-        #   create string object on heap (value is a C-string)
-        #   return pointer to C-string
-        return self.code_v(env, kp) + "getstr\n"
-
     def code_v(self, env, kp):
         # what is code_b of a string?
         #
         # code_b of string is pointer to null-terminated string values in heap
         # so code_v of string is:
         #       ['S', ptr] -> ['H','e','l','l','o','\0']
-        # and code_b is ptr to:
+        # and basic value should be ptr to:
         #       ['H','e','l','l','o','\0']
-        # this way a getbasic at end of program will print the string correctly if format string has specifier %s !!
-        # and TODO: make the format string always print %s, so integer will be casted to a string
+        # this way a getbasic at end of program will print the string correctly
         return fr"mkstr {self.id}" + "\n"
 
 @dataclass

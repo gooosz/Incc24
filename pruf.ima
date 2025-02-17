@@ -1,0 +1,41 @@
+# setting up global variables
+alloc 2
+mkvec 2
+setgv
+# body of program
+# AssignmentExpression(var=VariableExpression(name='x'), value=SelfEvaluatingExpression(id=4))
+pushglobalvec
+pushaddr 0
+loadc 4
+mkbasic
+rewrite
+pop 1
+# AssignmentExpression(var=VariableExpression(name='y'), value=SelfEvaluatingExpression(id=7))
+pushglobalvec
+pushaddr 1
+loadc 7
+mkbasic
+rewrite
+pop 1
+# Start of LocalExpression(localvars=[('z', BinaryOperatorExpression(e1=VariableExpression(name='x'), op='+', e2=VariableExpression(name='y')))], body=BinaryOperatorExpression(e1=SelfEvaluatingExpression(id=2), op='*', e2=VariableExpression(name='z')))
+alloc 1
+pushglobalvec
+pushaddr 0
+getbasic
+pushglobalvec
+pushaddr 1
+getbasic
+add
+mkbasic
+rewriteloc 1
+pop 1
+# local body
+loadc 2
+# getvar(z, {'parent': {'x': {'addr': 0, 'scope': 'global', 'size': 8}, 'y': {'addr': 1, 'scope': 'global', 'size': 8}}, 'z': {'addr': 1, 'scope': 'local', 'size': 8}}, 2), addr=1
+pushlocal 1
+getbasic
+mul
+mkbasic
+slide 1
+# End of LocalExpression(localvars=[('z', BinaryOperatorExpression(e1=VariableExpression(name='x'), op='+', e2=VariableExpression(name='y')))], body=BinaryOperatorExpression(e1=SelfEvaluatingExpression(id=2), op='*', e2=VariableExpression(name='z')))
+getbasic

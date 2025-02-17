@@ -1,11 +1,20 @@
 # setting up global variables
-alloc 1
-mkvec 1
+alloc 0
+mkvec 0
 setgv
 # body of program
-# AssignmentExpression(var=VariableExpression(name='x'), value=StringExpression(id='HelloWorld!'))
-pushglobalvec
-pushaddr 0
-mkstr HelloWorld!
-rewrite
+# LibCCallExpression(funcname='printf', params=[StringExpression(id='%d %d %d %d %d %d'), SelfEvaluatingExpression(id=1), SelfEvaluatingExpression(id=2), SelfEvaluatingExpression(id=3), SelfEvaluatingExpression(id=4), SelfEvaluatingExpression(id=5), SelfEvaluatingExpression(id=6)])
+loadc 6
+loadc 5
+loadc 4
+loadc 3
+loadc 2
+loadc 1
+mkstr %d %d %d %d %d %d
+getbasic
+loadc 7
+filllibcparams 7
+call printf
+slide 1
+mkbasic
 getbasic
