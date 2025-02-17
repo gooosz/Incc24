@@ -70,6 +70,16 @@ def alloc_tuple(typ, n=0):
             # Dummy object
             ret += "mov     qword [rdx], 'D'\n"
             ret += "mov     qword [rdx+8], 0\n"
+        case 'S':
+            # String object, n is size of string (without '\0' at end)
+            # each cell of C-string only has size 1 Byte
+            ret += "mov    qword [rdx], 'S'\n"
+            #ret += malloc(n+1) # length of string + '\0'
+            ret += 'push    rdx\n'  # preserve rdx across malloc call because it should hold address of tuple after call
+            ret += f'mov    rdi, {int(n+1)}\n'
+            ret += 'call   malloc\n'
+            ret += 'pop    rdx\n'
+            ret += 'mov    qword [rdx+8], rax\n'
         case _: raise NotImplementedError(f"No such type {typ} exists")
     return ret
 
@@ -94,11 +104,6 @@ def to_x86_64(cma_code, env) :
                 code += f';;; === loadc {q} ===\n'
                 code += f'mov   rcx, qword {str(q)}\n'
                 code += 'push   rcx\n'
-            case ['loadstr', *q]:
-                # string, but q is a list because whitespaces got split by regex
-                s = ' '.join(str(x) for x in q) # create a correct whitespace str, so undo the regex haha
-                code += f';;; === loadc {s} ===\n'
-                print(s)
             case ['add'] :
                 code += 'pop    rcx\n'
                 code += 'pop    rax\n'
@@ -152,10 +157,15 @@ def to_x86_64(cma_code, env) :
                 # getbasic nimmt Adresse vom Stack
                 # pushed Wert vom Tupel an der Adresse auf Stack
                 code += ';;; === getbasic ===\n'
-                code += 'pop    rax\n'
-                code += ''  # check if basic type
-                code += 'mov    rcx, [rax+8]\n'   # get value from heap
-                code += 'push   qword [rcx]\n'
+                #code += 'pop    rax\n'
+                #code += ''  # check if basic type
+                #code += 'mov    rcx, [rax+8]\n'   # get value from heap
+                #code += 'lea    rax, [rip]\n' # save Rücksprungadresse (without label) on stack
+                #code += 'push   rax\n'
+                code += "pop    rdi\n" # address to object
+                code += "call   getbasic\n" # returns getbasic value in rax
+                code += "push   rax\n"
+                #code += 'push   qword [rcx]\n'
             case ['dup']:
                 # duplicate the value on top of stack
                 code += ';;; === dup ===\n'
@@ -364,6 +374,70 @@ def to_x86_64(cma_code, env) :
                 code += 'mov    qword r12, [rcx+8]\n' # set new global vector
                 code += 'mov    qword rax, [rcx]\n' # addr of function body
                 code += 'jmp    rax\n'  # go into function
+            case ['mkstr', *q]:
+                # string, but q is a list because whitespaces got split by regex
+                s = ' '.join(str(x) for x in q) # create a correct whitespace str, so undo the regex haha
+                #s = q[1:-1] # ignore leading, trailing "
+                n = len(s)
+                code += f';;; === mkstr {s} ===\n'
+                code += alloc_tuple('S', n) # rdx holds address of tuple, rax holds address of values
+                # add characters of string to each cell of string object
+                #count_escaped = 0 # count escaped because this decreases n
+                for i in range(n):
+                #for i,c in enumerate(s):
+                    #if c.isdigit():
+                    #    # must add '0' to char value so the correct ascii value is placed in string
+                    #    code += f'mov   rcx, {c}\n'
+                    #    code += "add    rcx, '0'\n"
+                    #    code += f'mov    qword [rax+{i}], rcx\n'
+                    #else:
+                        # simply add the char
+                        # character needs to be escaped if \n e.g.
+                    # skip if value was escaped
+                    if i>0 and (s[i-1] == '\\' or s[i-1] == '%'):
+                        print(f"s[{i}]={s[i]} got escaped")
+                        #count_escaped += 1
+                        continue
+                    c = s[i]
+                    if (s[i] == '\\' or s[i] == '%') and i+1<len(s):
+                        c = s[i:i+2] # escaped value, e.g. \n, is 2 bytes big
+                        code += f"mov    word [rax+{i}], '{c}'" + '\n'
+                    else:
+                        #c = s[i] if s[i] != r'\\' else s[i:i+1]
+                        code += f"mov    byte [rax+{i}], '{c}'" + '\n'
+                    print(f"c = {c}")
+                #code += f"mov    qword [rax+{n}], '\\0'\n" # add '\0' to string
+                code += fr"mov    byte [rax+{n}], 0" + '\n' # add '\0' to string
+                code += 'push   rdx\n'
+            case ['getstr']:
+                # returns pointer to first cell of string object values
+                # on stack is address of object
+                code += f';;; === getstr ===\n'
+                code += 'pop    rax\n'
+                code += 'push   qword [rax+8]\n'
+            case ['filllibcparams', n]:
+                # fills registers with values from stack according to libc standard
+                # stack looks like
+                #   |    n    |
+                #   | param 1 |
+                #   |   ...   |
+                #   | param n |
+                code += ';;; === filllibcparams ===\n'
+                code += 'call fill_libc_params\n'
+                code += 'add    rsp, 8\n' # discard n
+                # discard the params on stack that are moved to the registers for call (<= 6)
+                if int(n)<=6:
+                    code += f'add   rsp, {8*int(n)}\n'
+                else:
+                    code += f'add   rsp, {8*6}\n'
+                # TODO: code += f'add    rsp, {8+ 8*(int(n) if int(n)<=6 else 6)}\n' # discard n + params on stack that are moved to the registers for call
+            case ['call', func]:
+                code += f';;; === call {func} ===\n'
+                code += "mov    rax,0               ; no xmm registers used\n"
+                code += "push   rbp                 ; set up stack frame, must be aligned\n"
+                code += f"call   {func}             ; Call LibC function\n"
+                code += "pop    rbp                 ; restore stack\n"
+                code += 'push   rax\n' # push return value onto stack
             case [*unknown]:
                 label, *unknown = unknown
                 label_match = re.search(r'\w+(?=:)', label)
@@ -374,37 +448,101 @@ def to_x86_64(cma_code, env) :
                     code += f'Error: unknown IMa statement {unknown}\n'
     return format_code(code)
 
-# fills needed registers for printf with different values
-# based on what object to print (basic, function, vector)
-# object to print is in rax
-def printf_object_fill_regs():
-    code = ""
+
+# getbasic must decide what to output
+# basic type: value of first object value cell
+# string type: pointer to first object value cell (so returns a C-string)
+# @param rdi has address of object
+# @returns rax the basic value
+def getbasic_function():
+    code = 'getbasic:\n'
+    code += 'push   rbp\n' # save old rbp
+    code += 'mov    rbp, rsp\n' # setup new stack frame
+
+    #code += 'pop    rcx\n' # Rücksprungadresse
+    code += 'mov    rax, rdi\n' # address of object
     # check type of object
     code += "mov    qword rdx, [rax]\n"
     code += "cmp    rdx, 'B'\n"
-    code += "je     print_basic\n"
-    code += "cmp    rdx, 'F'\n"
-    code += "je     print_function\n"
-    code += "cmp    rdx, 'V'\n"
-    code += "je     print_vector\n"
+    code += "je     getbasic_basic\n"
+    code += "cmp    rdx, 'S'\n"
+    code += "je     getbasic_string\n"
     # ========================================
     # if not a type of anything asked, it will default to printing as if object would be basic type
-    code += "print_basic:\n"
-    #code += "mov    qword rdx, [rax+8]        ; rdx holds value of basic type\n"
-    code += "mov    rsi, [rax+8]\n"
-    code += "mov    rdi, basic_type_fmt ; arguments in rdi, rsi\n"
-    code += "mov    rax,0               ; no xmm registers used\n"
-    code += "jmp    finished_filling_regs\n"
+    code += "getbasic_basic:\n"
+    code += 'mov    rdx, [rax+8]\n'   # get value from heap
+    code += 'mov    qword rax, [rdx]\n'
+    code += "jmp    finished_getbasic\n"
     # ========================================
-    code += "print_function:\n"
+    code += "getbasic_string:\n"
+    code += "mov    rdx, [rax+8]      ; rdx holds ptr to C-string\n"
+    code += "mov    rax, rdx\n"
+    code += "jmp    finished_getbasic\n"
+    # ========================================
+    code += "finished_getbasic:\n"
+    code += "mov    rsp, rbp\n"
+    code += "pop    rbp\n" # restore old stack frame
+    code += "ret\n"
+    return code
 
-    code += "jmp    print_function\n"
+def fill_libc_params_function():
+    # fills registers with values from stack according to calling convention
+    # when fill_libc_params is called, the stack looks like:
+    #   | Rücksprungadresse |
+    #   |    n    |
+    #   | param 1 |
+    #   |   ...   |
+    #   | param n |
+
+    """
+            Params:
+                1. rdi
+                2. rsi
+                3. rdx
+                4. rcx
+                5. r8
+                6. r9
+                all others get pushed on stack in reverse order:
+                |  7. |
+                | ... |
+        """
+    code = 'fill_libc_params:\n'
+    #code += 'mov    qword rcx, [rsp+8]\n'
+    code += 'push   rbp\n' # save old rbp
+    code += 'mov    rbp, rsp\n' # setup new stack frame
+    # Stack now looks like:
+    #   |     old rbp       |
+    #   | Rücksprungadresse |
+    #   |        n          |
+    #   |     param 1       |
+    #   |       ...         |
+    #   |     param n       |
+    code += f'mov    qword r10, [rsp+{16+8*0}]\n' # number of parameters given to printf
+    # check number of params
+    code += 'cmp    r10, 0\n'
+    code += 'je     filled_params\n'
+    code += f'mov    qword rdi, [rsp+{16+8*1}]\n'
+    code += 'cmp    r10, 1\n'
+    code += 'je     filled_params\n'
+    code += f'mov    qword rsi, [rsp+{16+8*2}]\n'
+    code += 'cmp    r10, 2\n'
+    code += 'je     filled_params\n'
+    code += f'mov    qword rdx, [rsp+{16+8*3}]\n'
+    code += 'cmp    r10, 3\n'
+    code += 'je     filled_params\n'
+    code += f'mov    qword rcx, [rsp+{16+8*4}]\n'
+    code += 'cmp    r10, 4\n'
+    code += 'je     filled_params\n'
+    code += f'mov    qword r8, [rsp+{16+8*5}]\n'
+    code += 'cmp    r10, 5\n'
+    code += 'je     filled_params\n'
+    code += f'mov    qword r9, [rsp+{16+8*6}]\n'
+    code += 'jmp    filled_params\n'
     # ========================================
-    code += "print_vector:\n"
-    code += "mov    qword rcx, [rax+8]\n      ; rcx holds size of vector"
-    code += "jmp    print_vector\n"
-    # ========================================
-    code += "finished_filling_regs:\n"
+    code += 'filled_params:\n'
+    code += "mov    rsp, rbp\n"
+    code += "pop    rbp\n" # restore old stack frame
+    code += "ret\n"
     return code
 
 
@@ -424,7 +562,8 @@ def x86_prefix(env):
     program  = "extern  printf\n"
     program += "extern  malloc\n"
     program += "SECTION .data               ; Data section, initialized variables\n"
-    program += 'basic_type_fmt:  db  "%lld", 10, 0 ; printf format for printing an int64\n'
+    program += 'basic_type_fmt:  db  10, "%lld", 10, 0 ; printf format for printing an int64\n'
+    program += 'string_type_fmt:  db  "%s", 10, 0 ; printf format for printing a string\n'
     program += 'malloc_errormsg:  db "Error: malloc failed, 10, 0"\n'
     program += '''; macros
 
@@ -434,6 +573,11 @@ def x86_prefix(env):
 def x86_start(env):
     program  = "\n"
     program += "SECTION  .text\nglobal main\n"
+    program += "\n"
+    program += getbasic_function()
+    program += "\n"
+    program += fill_libc_params_function()
+    program += "\n"
     program += "main:\n"
     program += "  push  rbp                 ; unnötig, weil es den Wert 1 enthält, trotzem notwendig, weil sonst segfault\n"              
     program += "  mov   rax,rsp             ; rsp zeigt auf den geretteten rbp  \n"          
@@ -449,7 +593,6 @@ def x86_final(env):
     program += "  mov    rsi, rax\n"
     program += "  mov    rdi, basic_type_fmt ; arguments in rdi, rsi\n"
     program += "  mov    rax,0               ; no xmm registers used\n"
-    #program += printf_object_fill_regs()
     program += "printf_call: \n"
     program += "  push  rbp                 ; set up stack frame, must be aligned\n"
     program += "  call  printf              ; Call C function\n"

@@ -1,8 +1,15 @@
+import ast
+
+libc_functions = {
+    'PRINTF'
+}
+
 reserved_set = {
     'LIST',
     'ARRAY',
     'SIZE'
-}
+} | libc_functions
+
 
 token_set = {
     'FLOAT',
@@ -35,6 +42,11 @@ def t_STRING(t):
     r'\"(\\t|\\n|\\\'|\\\"|\\\\|[^\\])*?\"'
     t.value = t.value[1:-1]
     return t
+#def t_STRING(t):
+#    r'"(?:[^"\\]|\\.)*?"'
+#    t.value = ast.literal_eval(t.value)
+#    return t
+
 
 # Ignore, Comments, and Error handling
 t_ignore  = ' \t\n'

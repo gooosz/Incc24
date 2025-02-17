@@ -87,7 +87,11 @@ def compileCode(code, args):
 
 def runExecutable(executable):
         # run the executable and return the output
-        return int(subprocess.check_output(f"./{executable}", stderr=subprocess.STDOUT, shell=True))
+        result = subprocess.check_output(f"./{executable}", stderr=subprocess.STDOUT, shell=True).splitlines()[-1] # result is last line of program output
+        # TODO: result should be returned only the last line because that is the return value of program, everything before is printed by printf
+        print(f"result: {result}, isdigit: {result.isdigit()}")
+        return int(result) # so testcases can simply write int as expected value
+
 
 def runTests(args):
         for exprtests in all_tests:

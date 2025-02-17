@@ -20,6 +20,7 @@ def p_expression_string_value(p):
     '''expression : STRING'''
     p[0] = gen().StringExpression(p[1])
 
+
 def p_expression_list_non_empty(p):
     'expression : LIST LPAREN expression_list RPAREN'
     p[0] = gen().ListExpression(p[3])
@@ -46,6 +47,10 @@ def p_size_expression(p):
     'expression : SIZE LPAREN IDENTIFIER RPAREN'
     # conveniently arr := [1,2,3]; arr returns the size
     p[0] = gen().VariableExpression(p[3])
+
+def p_libc_call_expression(p):
+    'expression : PRINTF LPAREN expression_list RPAREN'
+    p[0] = gen().LibCCallExpression(p[1], p[3])
 
 #def p_array_index_assign(p):
 #    'expression : IDENTIFIER LBRACKET expression RBRACKET ASSIGN expression'

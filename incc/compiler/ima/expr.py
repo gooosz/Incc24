@@ -32,6 +32,7 @@ class ProgramExpression(CompiledExpression):
     body: CompiledExpression
 
     def code_b(self, env, kp):
+        print(f"program: {self}")
         ret = ""
         # create global variables vector of whole program
         all_global_vars = free_vars(self.body)
@@ -185,8 +186,14 @@ class ArrayAccessExpression(CompiledExpression):
 class StringExpression(CompiledExpression):
     id: str
 
+    def code_b(self, env, kp):
+        # code_b of string:
+        #   create string object on heap (value is a C-string)
+        #   return pointer to C-string
+        return self.code_v(env, kp) + "getstr\n"
+
     def code_v(self, env, kp):
-        # TODO: what is code_b of a string?
+        # what is code_b of a string?
         #
         # code_b of string is pointer to null-terminated string values in heap
         # so code_v of string is:
@@ -195,7 +202,47 @@ class StringExpression(CompiledExpression):
         #       ['H','e','l','l','o','\0']
         # this way a getbasic at end of program will print the string correctly if format string has specifier %s !!
         # and TODO: make the format string always print %s, so integer will be casted to a string
-        return f'loadstr {self.id}\n'
+        return fr"mkstr {self.id}" + "\n"
+
+@dataclass
+class LibCCallExpression(CompiledExpression):
+    funcname: str # libc function name
+    params: list[CompiledExpression]
+
+    def code_b(self, env, kp):
+        # libc doesn't know incc's concept of objects
+        # so all libc return values (int, ptr) are basic values here
+        """
+            Params:
+                1. rdi
+                2. rsi
+                3. rdx
+                4. rcx
+                5. r8
+                6. r9
+                all others get pushed on stack in reverse order:
+                |  7. |
+                |  8. |
+                | ... |
+
+            Problem:
+                - ima is a stack-machine
+                - so doesn't know registers
+                => I have to fill registers/params in x86
+        """
+        n = len(self.params)
+        ret = ""
+        # push all params in reverse on stack, add number of params on top
+        # this way adding the values is super simple because add first 6 values to registers, the rest is already in right order on stack
+        for i in reversed(range(n)):
+            ret += self.params[i].code_b(env, kp+i)
+        ret += f"loadc {n}\n" # number of params
+        ret += f"filllibcparams {n}\n" # fills the registers with n param values
+        ret += f"call {self.funcname}\n"
+        # remove the n - min(n,6) - 1(value n) params from stack
+        ret += f"slide {n - min(n,6)}\n" # remove the n params from stack again, were only used to fill the registers for printf call
+        return f"# {self}\n" + ret
+
 
 
 
@@ -555,6 +602,7 @@ def free_vars(expr):
         case ArrayAccessExpression(var, index):     return {var} | free_vars(index)
         case UnaryOperatorExpression(op, expr):     return free_vars(expr)
         case StringExpression(x):                   return set()
+        case LibCCallExpression(f, params):         return set().union(*(free_vars(p) for p in params))
         case _:                                     raise Exception(f"free_vars({expr}) wrong")
 
 # returns biggest number of params of a lambda
@@ -580,6 +628,7 @@ def max_num_params(expr):
         case ArrayAccessExpression(var, index):     return max_num_params(index)
         case UnaryOperatorExpression(op, expr):     return max_num_params(expr)
         case StringExpression(x):                   return 0
+        case LibCCallExpression(f, params):         return max([max_num_params(p) for p in params]) # doesn't use params vector
         case _:                                     raise Exception(f"max_num_params({expr}) wrong")
 
 

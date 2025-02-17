@@ -735,6 +735,16 @@ array_tests = {"expr": "ArrayExpression", "testcases": [
 
 	{"code": """
 		{
+			x := 1;
+			arr := [x];
+			arr[0] := 2;
+			x
+		}
+	""",
+	"expected": 1},
+
+	{"code": """
+		{
 			local arr := [2] in arr[0]
 		}
 	""",
@@ -830,13 +840,104 @@ array_tests = {"expr": "ArrayExpression", "testcases": [
 
 string_tests = {"expr": "StringExpression", "testcases": [
 	{"code": """
+		x := "HelloWorld!"
+	""",
+	"expected": "HelloWorld!"},
+
+	{"code": """
 		{
-			x := "HelloWorld!"
+			x := "Hello World!"
 		}
 	""",
-	"expected": "Hello"}
+	"expected": "Hello World!"},
+
+	{"code": """
+		{
+			x := "Hello World!";
+			x
+		}
+	""",
+	"expected": "Hello World!"},
+
+	{"code": """
+		{
+			x := "Hello %s!";
+			x
+		}
+	""",
+	"expected": "Hello %s!"},
+
+	{"code": """
+		{
+			f := \(x) -> x := "New string";
+			x := "Hello!";
+			f(x);
+			x
+		}
+	""",
+	"expected": "New string"},
+
+	# escaping doesn't work yet
+	{"code": """
+		{
+			x := "Multi\\nLine\\nString!";
+			x
+		}
+	""",
+	"expected": Exception}
 	]}
 
+# TODO: escaping is weird because printf somehow sees it as 2 characters instead of 1
+# printf returns number of written characters (excluding \0)
+printf_tests = {"expr": "printf", "testcases": [
+	{"code": """
+		printf("Test")
+	""",
+	"expected": 4},
+
+	{"code": r"""
+		printf("Test\\n")
+	""",
+	"expected": 6},
+
+	{"code": """
+		{
+			x := "World!";
+			printf("Hello %s", x)
+		}
+	""",
+	"expected": 12},
+
+	{"code": """
+		{
+			x := "InCC";
+			printf("%s%d course", x, 24)
+		}
+	""",
+	"expected": 13},
+
+	{"code": """
+		{
+			printf("%d %d %d %d %d", 1, 2, 3, 4, 5)
+		}
+	""",
+	"expected": 9},
+
+	{"code": """
+		{
+			printf("%d %d %d %d %d %d", 1, 2, 3, 4, 5, 6)
+		}
+	""",
+	"expected": 9},
+
+	{"code": """
+		{
+			printf("%d %d %d %d %d %d %d %d", 1, 2, 3, 4, 5, 6, 7, 8)
+		}
+	""",
+	"expected": 15}
+
+	]}
 
 
 all_tests = [binaryexpr_tests,
@@ -848,5 +949,6 @@ all_tests = [binaryexpr_tests,
 	     localvar_tests,
 	     lambda_tests,
 	     array_tests,
-	     string_tests]
+	     string_tests,
+	     printf_tests]
 

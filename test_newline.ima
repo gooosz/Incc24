@@ -1,0 +1,12 @@
+# setting up global variables
+alloc 0
+mkvec 0
+setgv
+# body of program
+# LibCCallExpression(funcname='printf', params=[StringExpression(id='Test\\n')])
+mkstr Test\n
+getstr
+loadc 1
+filllibcparams 1
+call printf
+slide 1
